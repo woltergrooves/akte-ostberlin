@@ -4,7 +4,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { BUILDINGS } from "./data.js";
 import { instance } from "./assets.js";
 
-const SHORT = { kollwitz: "Kollwitz 12", lychener: "Lychener 40", greif: "Greifswalder", dimi: "Dimitroff", kerk: "Zionskirche", fabriek: "Bergmann-Borsig", school: "EOS-school", kliniek: "Poliklinik", cafe: "Café Mosaik", konsum: "Kaufhalle", mfs: "MfS" };
+const SHORT = { kollwitz: "Kollwitz 12", lychener: "Lychener 40", greif: "Greifswalder", dimi: "Dimitroff", kerk: "Zionskirche", fabriek: "Bergmann-Borsig", school: "EOS school", kliniek: "Poliklinik", cafe: "Café Mosaik", konsum: "Kaufhalle", mfs: "MfS" };
 const CELL = 6.5;
 
 function canvasTex(w, h, draw, k = 0.5) {
@@ -160,7 +160,7 @@ export function createWorld(container, H, M = {}) {
   }
   const cal = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.48), lam({ map: calTex, roughness: 0.9 }));
   cal.position.set(-0.45, 1.72, -1.59); O.add(cal);
-  tappable(cal, "kalender", "Jaardoelen", new THREE.Vector3(-0.45, 1.42, -1.55));
+  tappable(cal, "kalender", "Annual targets", new THREE.Vector3(-0.45, 1.42, -1.55));
 
   // kaart van de wijk aan de muur
   const mapTex = canvasTex(320, 256, (g, w, h) => {
@@ -174,7 +174,7 @@ export function createWorld(container, H, M = {}) {
   const mapM = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.76), lam({ map: mapTex, roughness: 0.9 }));
   mapG.add(mapM); mapG.add(box(1.0, 0.81, 0.02, mat(0x3a2c1d), 0, 0, -0.012, false));
   mapG.position.set(-1.2, 1.62, -1.58); O.add(mapG);
-  tappable(mapG, "wijk", "Kaart: naar de wijk", new THREE.Vector3(-1.2, 2.06, -1.5));
+  tappable(mapG, "wijk", "Map: to the district", new THREE.Vector3(-1.2, 2.06, -1.5));
 
   // klok
   const clockG = new THREE.Group();
@@ -231,7 +231,7 @@ export function createWorld(container, H, M = {}) {
   let hsBaseY = DESK_Y + 0.14;
   const phoneM = instance(M, "telefoon");
   if (phoneM) { phone.clear(); phoneM.position.y = DESK_Y; phoneM.scale.setScalar(1.05); phone.add(phoneM); const hs = phoneM.getObjectByName("Handset"); if (hs) { handset = hs; hsBaseY = hs.position.y; } }
-  tappable(phone, "telefoon", "Telefoon", new THREE.Vector3(-0.45, DESK_Y + 0.32, -0.08));
+  tappable(phone, "telefoon", "Telephone", new THREE.Vector3(-0.45, DESK_Y + 0.32, -0.08));
 
   // dossierstapel
   const folders = new THREE.Group(); folders.position.set(0.05, DESK_Y, 0.02); O.add(folders);
@@ -249,12 +249,12 @@ export function createWorld(container, H, M = {}) {
     folders.traverse(m => m.userData.tap = "dossiers");
   }
   setFolders(0);
-  tappables.push({ obj: folders, key: "dossiers", label: "Dossiers", anchor: new THREE.Vector3(0.05, DESK_Y + 0.33, 0.02) });
+  tappables.push({ obj: folders, key: "dossiers", label: "Files", anchor: new THREE.Vector3(0.05, DESK_Y + 0.33, 0.02) });
 
   // rode onderzoeksmap
   const caseF = new THREE.Group(); caseF.add(box(0.3, 0.025, 0.4, mat(0x8e2a20), 0, 0, 0)); caseF.add(box(0.12, 0.002, 0.08, mat(0xefe7d2), 0, 0.014, 0.05));
   caseF.position.set(-0.08, DESK_Y + 0.015, 0.32); caseF.rotation.y = -0.25; O.add(caseF);
-  tappable(caseF, "onderzoek", "Onderzoek!", new THREE.Vector3(-0.08, DESK_Y + 0.22, 0.32));
+  tappable(caseF, "onderzoek", "Case!", new THREE.Vector3(-0.08, DESK_Y + 0.22, 0.32));
   caseF.visible = false;
 
   // typemachine
@@ -270,7 +270,7 @@ export function createWorld(container, H, M = {}) {
   tw.position.set(0.68, 0, -0.18); tw.rotation.y = -0.3; O.add(tw);
   const twM = instance(M, "typemachine");
   if (twM) { tw.clear(); twM.position.y = DESK_Y; twM.scale.setScalar(1.12); tw.add(twM); }
-  tappable(tw, "typemachine", "Typemachine", new THREE.Vector3(0.68, DESK_Y + 0.42, -0.18));
+  tappable(tw, "typemachine", "Typewriter", new THREE.Vector3(0.68, DESK_Y + 0.42, -0.18));
 
   // fotolijst
   const photoTex = canvasTex(160, 200, (g, w, h) => {
@@ -284,7 +284,7 @@ export function createWorld(container, H, M = {}) {
   photo.add(box(0.15, 0.19, 0.012, mat(0x2a1d12), 0, 0, 0));
   const pm = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.16), lam({ map: photoTex })); pm.position.z = 0.007; photo.add(pm);
   photo.position.set(-0.6, DESK_Y + 0.095, -0.6); photo.rotation.set(-0.18, 0.4, 0); O.add(photo);
-  tappable(photo, "gezin", "Gezin", new THREE.Vector3(-0.6, DESK_Y + 0.3, -0.6));
+  tappable(photo, "gezin", "Family", new THREE.Vector3(-0.6, DESK_Y + 0.3, -0.6));
 
   // asbak + koffie
   const ashM = instance(M, "asbak"), cupM = instance(M, "koffiekop");
@@ -302,7 +302,7 @@ export function createWorld(container, H, M = {}) {
   cab.add(box(0.62, 1.3, 0.55, cabMat, 0, 0.65, 0));
   for (let i = 0; i < 4; i++) { cab.add(box(0.56, 0.28, 0.02, mat(0x6d786b, { metalness: 0.4, roughness: 0.45 }), 0, 0.2 + i * 0.31, 0.28)); cab.add(box(0.14, 0.03, 0.03, brass, 0, 0.27 + i * 0.31, 0.3)); cab.add(box(0.1, 0.05, 0.005, mat(0xefe7d2), 0, 0.22 + i * 0.31, 0.292)); }
   cab.position.set(1.3, 0, -1.25); cab.rotation.y = -0.35; O.add(cab);
-  tappable(cab, "kartotheek", "Kartotheek", new THREE.Vector3(1.3, 1.45, -1.25));
+  tappable(cab, "kartotheek", "Card index", new THREE.Vector3(1.3, 1.45, -1.25));
 
   // deur
   const door = new THREE.Group(); door.add(box(0.95, 2.1, 0.05, mat(0x6b5236, { roughness: 0.5 }), 0, 1.05, 0)); door.add(cyl(0.03, 0.03, 0.08, brass, 0.38, 1.05, 0.05)); door.children[1].rotation.x = Math.PI / 2;

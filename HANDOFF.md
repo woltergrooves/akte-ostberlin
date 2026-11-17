@@ -8,6 +8,7 @@ Lees dit bestand eerst. Het wordt na elke fase bijgewerkt.
 - Speelbare versie: **Vercel, alleen de hoofdlink (productie)**. Project `akte-ostberlin` (id `prj_0t8lqbjU0Qoo5AbMBypBQmhW0OS1`, team `team_9sTfW7elg4plHXQQzq2Vij2Q`), gekoppeld aan de repo. Elke push naar `main` deployt naar productie; preview-deployments staan uit. Geen artifacts meer gebruiken. `.vercelignore` sluit `tools/` en `.md` uit; geen buildstap (statische site, `.glb` gewoon via fetch).
 - Controleer na de push met de Vercel-tools (list_deployments / get_deployment) dat de productie-deployment `READY` is, en geef de gebruiker die ene hoofdlink.
 - Doelapparaat: iPhone/iPad Safari.
+- **Taal: de game is volledig Engels** (sinds 17 nov). Alle nieuwe teksten in het spel in het Engels schrijven; alleen Duitse periodetermen (IM, Zersetzung, Genosse Major, Kreisdienststelle, Kaufhalle, stempels als STRENG GEHEIM) blijven Duits. Interne sleutels en code-commentaar mogen Nederlands blijven (`vrij`, `gevangen`, `kerk`...; weergave via `STATUS_L`). Met de gebruiker communiceren in het Nederlands.
 
 ## Bestanden
 - `index.html`: pagina en importmap, laadscherm `#loader`

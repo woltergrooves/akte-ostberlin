@@ -1,42 +1,43 @@
-// ===================== DATA: Akte — Ost-Berlin 1983–1989 =====================
+// ===================== DATA: Akte — East Berlin 1983–1989 =====================
+// All in-game text is English. German only for period terms (IM, Zersetzung, Kaufhalle, ...).
 
 // Beurten: vier per jaar, extra beurten in 1987 en in de herfst van 1989 (32 in totaal).
 // Elke beurt hoort bij een echte gebeurtenis; datums gecontroleerd met webbronnen (zie ROADMAP.md, fase 3).
 // first = begin jaardoel, review = jaarbeoordeling, winter = sneeuw/kachelrook, flight = vluchtgolf, late = geen losse gebeurtenissen
 const tu = (y, m, key, o = {}) => ({ y, label: `${m} ${y}`, key, ...o });
 export const TURNS = [
-  tu(1983, "Maart", "1983-mrt", { first: true, winter: true }),
-  tu(1983, "Juni", "1983-jun"),
+  tu(1983, "March", "1983-mrt", { first: true, winter: true }),
+  tu(1983, "June", "1983-jun"),
   tu(1983, "September", "1983-sep"),              // 24 sept.: Schwerter zu Pflugscharen in Wittenberg
   tu(1983, "December", "1983-dec", { review: true, winter: true }), // 12 dec.: arrestatie Bohley en Poppe
-  tu(1984, "Maart", "1984-mrt", { first: true, winter: true }),     // uitreisgolf, ±40.000 in 1984
-  tu(1984, "Juni", "1984-jun"),                    // 27 juni: Ständige Vertretung gesloten
+  tu(1984, "March", "1984-mrt", { first: true, winter: true }),     // uitreisgolf, ±40.000 in 1984
+  tu(1984, "June", "1984-jun"),                    // 27 juni: Ständige Vertretung gesloten
   tu(1984, "September", "1984-sep"),
   tu(1984, "December", "1984-dec", { review: true, winter: true }),
-  tu(1985, "Maart", "1985-mrt", { first: true, winter: true }),     // 11 maart: Gorbatsjov
-  tu(1985, "Juni", "1985-jun"),
+  tu(1985, "March", "1985-mrt", { first: true, winter: true }),     // 11 maart: Gorbatsjov
+  tu(1985, "June", "1985-jun"),
   tu(1985, "September", "1985-sep"),
   tu(1985, "December", "1985-dec", { review: true, winter: true }),
-  tu(1986, "Maart", "1986-mrt", { first: true, winter: true }),
-  tu(1986, "Mei", "1986-mei"),                     // 26 april: Tsjernobyl
+  tu(1986, "March", "1986-mrt", { first: true, winter: true }),
+  tu(1986, "May", "1986-mei"),                     // 26 april: Tsjernobyl
   tu(1986, "September", "1986-sep"),               // 2 sept.: Umwelt-Bibliothek in de Zionskirche
   tu(1986, "December", "1986-dec", { review: true, winter: true }),
-  tu(1987, "Maart", "1987-mrt", { first: true, winter: true }),
-  tu(1987, "Juni", "1987-jun"),                    // 6–8 juni: Concert for Berlin bij de Rijksdag
+  tu(1987, "March", "1987-mrt", { first: true, winter: true }),
+  tu(1987, "June", "1987-jun"),                    // 6–8 juni: Concert for Berlin bij de Rijksdag
   tu(1987, "September", "1987-sep"),               // 7–11 sept.: Honecker in de Bondsrepubliek
-  tu(1987, "Oktober", "1987-okt"),                 // 17 okt.: skinheads in de Zionskirche
+  tu(1987, "October", "1987-okt"),                 // 17 okt.: skinheads in de Zionskirche
   tu(1987, "November", "1987-nov", { review: true, winter: true }), // 24/25 nov.: inval Umwelt-Bibliothek
-  tu(1988, "Januari", "1988-jan", { first: true, winter: true }),   // 17 jan.: Liebknecht-Luxemburg
+  tu(1988, "January", "1988-jan", { first: true, winter: true }),   // 17 jan.: Liebknecht-Luxemburg
   tu(1988, "April", "1988-apr"),
-  tu(1988, "Juli", "1988-jul"),                    // 19 juli: Springsteen in Weißensee
+  tu(1988, "July", "1988-jul"),                    // 19 juli: Springsteen in Weißensee
   tu(1988, "November", "1988-nov", { review: true, winter: true }), // 19 nov.: Sputnik geschrapt
-  tu(1989, "Februari", "1989-feb", { first: true, winter: true }),  // 5 feb.: Chris Gueffroy
-  tu(1989, "Mei", "1989-mei"),                     // 7 mei: gemeenteraadsverkiezingen
-  tu(1989, "Augustus", "1989-aug", { flight: true }),  // 19 aug.: Paneuropees picknick
+  tu(1989, "February", "1989-feb", { first: true, winter: true }),  // 5 feb.: Chris Gueffroy
+  tu(1989, "May", "1989-mei"),                     // 7 mei: gemeenteraadsverkiezingen
+  tu(1989, "August", "1989-aug", { flight: true }),  // 19 aug.: Paneuropees picknick
   tu(1989, "September", "1989-sep", { flight: true }), // 9/10 sept.: Neues Forum, 11 sept.: Hongarije open
-  { y: 1989, label: "7 oktober 1989", key: "1989-okt", late: true },
-  { y: 1989, label: "4 november 1989", key: "1989-nov4", late: true, winter: true },
-  { y: 1989, label: "9 november 1989", key: "1989-nov", late: true, winter: true },
+  { y: 1989, label: "7 October 1989", key: "1989-okt", late: true },
+  { y: 1989, label: "4 November 1989", key: "1989-nov4", late: true, winter: true },
+  { y: 1989, label: "9 November 1989", key: "1989-nov", late: true, winter: true },
 ];
 export const turnIndex = key => TURNS.findIndex(t => t.key === key);
 
@@ -49,53 +50,53 @@ export const RANKS = [
 
 // Gebouwen in de wijk (grid x,z), type bepaalt 3D-model
 export const BUILDINGS = [
-  { id: "kollwitz", name: "Kollwitzstraße 12", kind: "altbau", x: -2, z: -2, color: 0xb59a7a, res: true, desc: "Altbau, vijf verdiepingen, kolenkachels. Hier woon jij." },
-  { id: "lychener", name: "Lychener Straße 40", kind: "altbau", x: -3, z: 2, color: 0x9a8f80, res: true, desc: "Grauwe Altbau met kogelgaten uit 1945 in de gevel." },
-  { id: "greif", name: "Plattenbau Greifswalder Str.", kind: "platte", x: 3, z: -2, color: 0xc9c3b4, res: true, desc: "WBS-70 Plattenbau, 120 woningen. Lift doet het soms." },
-  { id: "dimi", name: "Plattenbau Dimitroffstraße", kind: "platte", x: 3, z: 1, color: 0xbdb8a8, res: true, desc: "Nieuwbouw uit 1982. Dunne muren." },
-  { id: "kerk", name: "Zionskirche", kind: "kerk", x: 0, z: -2, color: 0x8e6e5a, work: true, desc: "Evangelische kerk. In de kelder: een ‘bibliotheek’." },
-  { id: "fabriek", name: "VEB Bergmann-Borsig", kind: "fabriek", x: -4, z: 0, color: 0x7d7468, work: true, desc: "Machinefabriek, 3.000 arbeiders." },
-  { id: "school", name: "EOS Carl von Ossietzky", kind: "school", x: -1, z: 2, color: 0xc4a36e, work: true, desc: "Uitgebreide middelbare school." },
-  { id: "kliniek", name: "Poliklinik Prenzlauer Berg", kind: "kliniek", x: 1, z: 2, color: 0xd6d2c4, work: true, desc: "Huisartsen, tandartsen, altijd wachtrijen." },
-  { id: "cafe", name: "Café Mosaik", kind: "cafe", x: -1, z: 0, color: 0x6f5a4a, work: true, desc: "Kunstenaars, dichters, rook. Veel rook." },
-  { id: "konsum", name: "Kaufhalle (Konsum)", kind: "konsum", x: 1, z: 0, color: 0xa7b1a0, work: true, desc: "Wie er rijen ziet, gaat erin staan." },
-  { id: "mfs", name: "Kreisdienststelle MfS", kind: "mfs", x: 4, z: 0, color: 0x6a6d6a, desc: "Jouw kantoor. Geen naambord." },
+  { id: "kollwitz", name: "Kollwitzstraße 12", kind: "altbau", x: -2, z: -2, color: 0xb59a7a, res: true, desc: "Altbau, five storeys, coal stoves. You live here." },
+  { id: "lychener", name: "Lychener Straße 40", kind: "altbau", x: -3, z: 2, color: 0x9a8f80, res: true, desc: "Grey Altbau with bullet holes from 1945 in the facade." },
+  { id: "greif", name: "Plattenbau Greifswalder Str.", kind: "platte", x: 3, z: -2, color: 0xc9c3b4, res: true, desc: "WBS 70 Plattenbau, 120 flats. The lift works, sometimes." },
+  { id: "dimi", name: "Plattenbau Dimitroffstraße", kind: "platte", x: 3, z: 1, color: 0xbdb8a8, res: true, desc: "New build from 1982. Thin walls." },
+  { id: "kerk", name: "Zionskirche", kind: "kerk", x: 0, z: -2, color: 0x8e6e5a, work: true, desc: "Protestant church. In the cellar: a ‘library’." },
+  { id: "fabriek", name: "VEB Bergmann-Borsig", kind: "fabriek", x: -4, z: 0, color: 0x7d7468, work: true, desc: "Engineering works, 3,000 workers." },
+  { id: "school", name: "EOS Carl von Ossietzky", kind: "school", x: -1, z: 2, color: 0xc4a36e, work: true, desc: "Extended secondary school (sixth form)." },
+  { id: "kliniek", name: "Poliklinik Prenzlauer Berg", kind: "kliniek", x: 1, z: 2, color: 0xd6d2c4, work: true, desc: "GPs, dentists, always a queue." },
+  { id: "cafe", name: "Café Mosaik", kind: "cafe", x: -1, z: 0, color: 0x6f5a4a, work: true, desc: "Artists, poets, smoke. Lots of smoke." },
+  { id: "konsum", name: "Kaufhalle (Konsum)", kind: "konsum", x: 1, z: 0, color: 0xa7b1a0, work: true, desc: "If you see a queue, you join it." },
+  { id: "mfs", name: "Kreisdienststelle MfS", kind: "mfs", x: 4, z: 0, color: 0x6a6d6a, desc: "Your office. No nameplate." },
 ];
 
 export const WORKPLACES = {
-  kerk: { name: "Zionskirche", paper: "stencilpapier van een kerkelijke drukpers" },
-  fabriek: { name: "VEB Bergmann-Borsig", paper: "doorslagpapier met fabrieksstempel" },
-  school: { name: "EOS Carl von Ossietzky", paper: "gelinieerd schoolpapier" },
-  kliniek: { name: "Poliklinik", paper: "achterkanten van receptformulieren" },
-  cafe: { name: "Café Mosaik", paper: "bierviltjes en kassarol" },
-  konsum: { name: "Kaufhalle", paper: "bruin pakpapier" },
-  uni: { name: "Humboldt-Universität", paper: "dun collegepapier" },
+  kerk: { name: "Zionskirche", paper: "stencil paper from a church duplicator" },
+  fabriek: { name: "VEB Bergmann-Borsig", paper: "carbon copy paper with a factory stamp" },
+  school: { name: "EOS Carl von Ossietzky", paper: "lined school paper" },
+  kliniek: { name: "Poliklinik", paper: "the backs of prescription forms" },
+  cafe: { name: "Café Mosaik", paper: "beer mats and till roll" },
+  konsum: { name: "Kaufhalle", paper: "brown wrapping paper" },
+  uni: { name: "Humboldt-Universität", paper: "thin lecture paper" },
 };
 
 export const TYPEWRITERS = [
-  { id: "tw1", label: "Erika-typemachine, scheve ‘e’" },
-  { id: "tw2", label: "Erika-typemachine, ‘t’ slaat door" },
-  { id: "tw3", label: "Olympia-typemachine, dichtgelopen ‘o’" },
-  { id: "tw4", label: "Robotron-typemachine, springende ‘a’" },
+  { id: "tw1", label: "Erika typewriter, crooked ‘e’" },
+  { id: "tw2", label: "Erika typewriter, ‘t’ punches through" },
+  { id: "tw3", label: "Olympia typewriter, clogged ‘o’" },
+  { id: "tw4", label: "Robotron typewriter, jumping ‘a’" },
 ];
 
 export const TRAITS = {
-  rias: { l: "Luistert naar RIAS en West-tv", dis: 4 },
-  westfam: { l: "Familie in de Bondsrepubliek", lev: 2 },
-  kerk: { l: "Actief in de kerkgemeente", dis: 10 },
-  ausreise: { l: "Overweegt een uitreisaanvraag", dis: 14, lev: 2 },
-  affaire: { l: "Heeft een buitenechtelijke affaire", lev: 3 },
-  schulden: { l: "Diep in de schulden", lev: 3 },
-  zwart: { l: "Handelt zwart in Westmark", lev: 3 },
-  drank: { l: "Drinkt te veel", lev: 1 },
-  kindstudie: { l: "Kind wil gaan studeren", lev: 2 },
-  milieu: { l: "Betrokken bij milieugroep", dis: 20 },
-  vrede: { l: "Draagt ‘Zwaarden tot ploegscharen’", dis: 14 },
-  samizdat: { l: "Verspreidt verboden lectuur", dis: 25 },
-  vlucht: { l: "Praat over vluchten", dis: 18 },
-  punk: { l: "Gaat naar punkconcerten", dis: 10 },
-  loyaal: { l: "Overtuigd SED-lid", dis: -25 },
-  klager: { l: "Schrijft klachtbrieven (Eingaben)", dis: 6 },
+  rias: { l: "Listens to RIAS and West German TV", dis: 4 },
+  westfam: { l: "Has family in West Germany", lev: 2 },
+  kerk: { l: "Active in the church congregation", dis: 10 },
+  ausreise: { l: "Considering an exit application", dis: 14, lev: 2 },
+  affaire: { l: "Having an extramarital affair", lev: 3 },
+  schulden: { l: "Deep in debt", lev: 3 },
+  zwart: { l: "Black-market dealing in West marks", lev: 3 },
+  drank: { l: "Drinks too much", lev: 1 },
+  kindstudie: { l: "Child wants to go to university", lev: 2 },
+  milieu: { l: "Involved in an environmental group", dis: 20 },
+  vrede: { l: "Wears ‘Swords into Ploughshares’", dis: 14 },
+  samizdat: { l: "Distributes banned literature", dis: 25 },
+  vlucht: { l: "Talks about escaping", dis: 18 },
+  punk: { l: "Goes to punk gigs", dis: 10 },
+  loyaal: { l: "Committed SED member", dis: -25 },
+  klager: { l: "Writes complaint letters (Eingaben)", dis: 6 },
   tw1: { l: TYPEWRITERS[0].label, tw: 1 },
   tw2: { l: TYPEWRITERS[1].label, tw: 1 },
   tw3: { l: TYPEWRITERS[2].label, tw: 1 },
@@ -107,27 +108,27 @@ const FN_M = ["Uwe","Jörg","Frank","Ralf","Andreas","Holger","Steffen","Matthia
 const FN_F = ["Petra","Sabine","Kerstin","Heike","Birgit","Simone","Manuela","Ute","Monika","Gabi","Silke","Anja","Katja","Doris","Ines","Karin","Elke","Martina"];
 const LN = ["Müller","Schmidt","Krüger","Hoffmann","Lehmann","Neumann","Schwarz","Zimmermann","Braun","Hartmann","Lange","Werner","Krause","Meier","Wolf","Fiedler","Seidel","Köhler","Pietsch","Ziegler","Böhme","Winkler","Lorenz","Jahn","Hahn","Kaiser","Frenzel","Engel"];
 const JOBS = {
-  kerk: ["koster","diaken","organist","kerkelijk medewerker"],
-  fabriek: ["draaier","lasser","monteur","ingenieur","technisch tekenaar","ploegleider"],
-  school: ["lerares Russisch","leraar wiskunde","leraar sport","secretaresse"],
-  kliniek: ["verpleegkundige","tandarts","huisarts","laborante"],
-  cafe: ["serveerster","kok","barman","dichter (zonder vergunning)","schilder"],
-  konsum: ["caissière","vakkenvuller","filiaalchef"],
-  uni: ["student filosofie","studente biologie","assistent-docent"],
+  kerk: ["sexton","deacon","organist","church worker"],
+  fabriek: ["lathe operator","welder","fitter","engineer","draughtsman","shift foreman"],
+  school: ["Russian teacher","maths teacher","PE teacher","school secretary"],
+  kliniek: ["nurse","dentist","GP","lab assistant"],
+  cafe: ["waitress","cook","barman","poet (unlicensed)","painter"],
+  konsum: ["cashier","shelf stacker","store manager"],
+  uni: ["philosophy student","biology student","teaching assistant"],
 };
 
 // Vaste verhaalpersonages
 export const STORY_PEOPLE = [
-  { id: "brandt", fn: "Dieter", ln: "Brandt", age: 34, sex: "m", job: "automonteur", work: "fabriek", home: "lychener", traits: ["rias", "drank", "tw3"], dis: 15, loyal: 40 },
-  { id: "kuehn", fn: "Martin", ln: "Kühn", age: 46, sex: "m", job: "dominee", work: "kerk", home: "kollwitz", traits: ["kerk", "milieu", "vrede", "tw1"], dis: 55, loyal: 10 },
-  { id: "anna", fn: "Anna", ln: "Weiss", age: 22, sex: "f", job: "studente geneeskunde", work: "uni", home: "greif", traits: ["ausreise", "westfam", "rias"], dis: 30, loyal: 20 },
-  { id: "herta", fn: "Herta", ln: "Schulz", age: 58, sex: "f", job: "conciërge", work: "konsum", home: "greif", traits: ["kindstudie", "loyaal"], dis: 0, loyal: 70 },
-  { id: "lena", fn: "Lena", ln: "Vogt", age: 41, sex: "f", job: "verpleegkundige", work: "kliniek", home: "dimi", traits: ["westfam", "klager"], dis: 20, loyal: 35 },
-  { id: "richter", fn: "Klaus", ln: "Richter", age: 45, sex: "m", job: "leraar geschiedenis", work: "school", home: "dimi", traits: ["kerk", "tw4"], dis: 25, loyal: 30 },
-  { id: "jutta", fn: "Jutta", ln: "Lang", age: 38, sex: "f", job: "architecte", work: "cafe", home: "kollwitz", traits: ["samizdat", "milieu", "tw2"], dis: 45, loyal: 10 },
-  { id: "thomas", fn: "Thomas", ln: "", age: 36, sex: "m", job: "ingenieur — jouw broer", work: "fabriek", home: "lychener", traits: ["rias", "klager"], dis: 15, loyal: 40, family: true },
-  { id: "pohl", fn: "Erich", ln: "Pohl", age: 67, sex: "m", job: "gepensioneerd spoorman — je buurman", work: null, home: "kollwitz", traits: ["loyaal"], dis: 0, loyal: 95, secretIM: true },
-  { id: "micha", fn: "Micha", ln: "Seidel", age: 19, sex: "m", job: "leerling-lasser, punk", work: "fabriek", home: "dimi", traits: ["punk", "vrede", "vlucht"], dis: 40, loyal: 5 },
+  { id: "brandt", fn: "Dieter", ln: "Brandt", age: 34, sex: "m", job: "car mechanic", work: "fabriek", home: "lychener", traits: ["rias", "drank", "tw3"], dis: 15, loyal: 40 },
+  { id: "kuehn", fn: "Martin", ln: "Kühn", age: 46, sex: "m", job: "pastor", work: "kerk", home: "kollwitz", traits: ["kerk", "milieu", "vrede", "tw1"], dis: 55, loyal: 10 },
+  { id: "anna", fn: "Anna", ln: "Weiss", age: 22, sex: "f", job: "medical student", work: "uni", home: "greif", traits: ["ausreise", "westfam", "rias"], dis: 30, loyal: 20 },
+  { id: "herta", fn: "Herta", ln: "Schulz", age: 58, sex: "f", job: "caretaker", work: "konsum", home: "greif", traits: ["kindstudie", "loyaal"], dis: 0, loyal: 70 },
+  { id: "lena", fn: "Lena", ln: "Vogt", age: 41, sex: "f", job: "nurse", work: "kliniek", home: "dimi", traits: ["westfam", "klager"], dis: 20, loyal: 35 },
+  { id: "richter", fn: "Klaus", ln: "Richter", age: 45, sex: "m", job: "history teacher", work: "school", home: "dimi", traits: ["kerk", "tw4"], dis: 25, loyal: 30 },
+  { id: "jutta", fn: "Jutta", ln: "Lang", age: 38, sex: "f", job: "architect", work: "cafe", home: "kollwitz", traits: ["samizdat", "milieu", "tw2"], dis: 45, loyal: 10 },
+  { id: "thomas", fn: "Thomas", ln: "", age: 36, sex: "m", job: "engineer — your brother", work: "fabriek", home: "lychener", traits: ["rias", "klager"], dis: 15, loyal: 40, family: true },
+  { id: "pohl", fn: "Erich", ln: "Pohl", age: 67, sex: "m", job: "retired railwayman — your neighbour", work: null, home: "kollwitz", traits: ["loyaal"], dis: 0, loyal: 95, secretIM: true },
+  { id: "micha", fn: "Micha", ln: "Seidel", age: 19, sex: "m", job: "apprentice welder, punk", work: "fabriek", home: "dimi", traits: ["punk", "vrede", "vlucht"], dis: 40, loyal: 5 },
 ];
 
 export function makeRng(seed) {
@@ -172,33 +173,33 @@ export function generatePeople(seed) {
 }
 
 // Pamfletten / anonieme acties — sjablonen
-export const INCIDENTS = [   // from = vroegste jaar waarin het past
-  { t: "Een anoniem pamflet", d: "‘Wij willen geen land waar je je eigen buren moet vrezen.’ Gevonden in brievenbussen.", from: 1983 },
-  { t: "Leuzen op een muur", d: "Op een gevel staat in witte verf: ‘GORBI GORBI’. Erbij een getypt briefje met de tekst van artikel 27 van de grondwet: vrijheid van meningsuiting.", from: 1987 },
-  { t: "Een getypte oproep", d: "Een oproep om op de 7e van de maand naar de Alexanderplatz te komen, tegen de vervalste verkiezingsuitslag.", from: 1989 },
-  { t: "Een samizdat-blad", d: "Zes getypte pagina's, ‘Umweltblätter’, over de luchtvervuiling in Bitterfeld.", from: 1987 },
-  { t: "Een open brief", d: "Een brief aan de Volkskammer over reisvrijheid, met de oproep hem over te typen en door te geven.", from: 1983 },
-  { t: "Een spotgedicht", d: "Een getypt gedicht over een ‘oude man met een hoed die de toekomst niet ziet’.", from: 1983 },
-  { t: "Een stencil over vrede", d: "Een gestencild blad met een tekening van een smid die een zwaard omsmeedt, en de tekst: ‘Schwerter zu Pflugscharen’.", from: 1983 },
+export const INCIDENTS = [   // from = earliest year in which it fits
+  { t: "An anonymous leaflet", d: "‘We don't want a country where you have to fear your own neighbours.’ Found in letterboxes.", from: 1983 },
+  { t: "Slogans on a wall", d: "Painted in white on a facade: ‘GORBI GORBI’. Next to it a typed note with Article 27 of the constitution: freedom of expression.", from: 1987 },
+  { t: "A typed call", d: "A call to come to Alexanderplatz on the 7th of the month, against the rigged election result.", from: 1989 },
+  { t: "A samizdat sheet", d: "Six typed pages, ‘Umweltblätter’, about the air pollution in Bitterfeld.", from: 1987 },
+  { t: "An open letter", d: "A letter to the Volkskammer about freedom to travel, asking readers to retype it and pass it on.", from: 1983 },
+  { t: "A mocking poem", d: "A typed poem about ‘an old man in a hat who cannot see the future’.", from: 1983 },
+  { t: "A stencil about peace", d: "A stencilled sheet with a drawing of a smith reforging a sword, and the words ‘Schwerter zu Pflugscharen’.", from: 1983 },
 ];
 
 // Afgeluisterde fragmenten per trait (Wanze / telefoontap)
 export const OVERHEARD = {
-  rias: ["‘Heb je gisteren het journaal van de ARD gezien?’", "‘Zet hem harder, het is de RIAS-hitparade.’"],
-  westfam: ["‘Tante Gerda stuurt weer een pakket uit Keulen.’", "‘Mijn broer in Hamburg heeft een nieuwe Golf.’"],
-  kerk: ["‘Zondag na de dienst blijven we nog even.’"],
-  ausreise: ["‘Als we het formulier indienen, verliezen we allebei ons werk.’"],
-  affaire: ["‘Mijn man is dinsdag laat thuis, kom dan.’", "‘Niemand mag van ons weten.’"],
-  schulden: ["‘Ik kan het hem deze maand niet terugbetalen.’"],
-  zwart: ["‘Vijf West voor een fles, ja of nee?’"],
-  drank: ["(geluid van flessen) ‘Nog eentje dan.’"],
-  kindstudie: ["‘Als hij op de EOS komt, kan hij later medicijnen studeren.’"],
-  milieu: ["‘De metingen in de Pleiße zijn nog erger dan vorig jaar.’"],
-  vrede: ["‘Ze willen dat ik het embleem van mijn jas haal. Ik doe het niet.’"],
-  samizdat: ["‘Ik heb twintig doorslagen gemaakt, meer gaat er niet in de machine.’"],
-  vlucht: ["‘Via Hongarije, zeggen ze. Over het meer.’"],
-  punk: ["‘Zaterdag spelen ze in de kerk, zeg het niemand.’"],
-  loyaal: ["‘De partij weet wat ze doet. Klaar.’"],
-  klager: ["‘Ik schrijf weer een Eingabe over de verwarming. Derde keer.’"],
-  tw: ["(getik van een typemachine, lang)", "‘Het lint is bijna op, en de ’e’ staat weer scheef.’"],
+  rias: ["‘Did you see the ARD news last night?’", "‘Turn it up, it's the RIAS chart show.’"],
+  westfam: ["‘Aunt Gerda is sending another parcel from Cologne.’", "‘My brother in Hamburg has a new Golf.’"],
+  kerk: ["‘We'll stay on a bit after Sunday's service.’"],
+  ausreise: ["‘If we hand in the form, we'll both lose our jobs.’"],
+  affaire: ["‘My husband's home late on Tuesday, come then.’", "‘Nobody can know about us.’"],
+  schulden: ["‘I can't pay him back this month.’"],
+  zwart: ["‘Five West for a bottle, yes or no?’"],
+  drank: ["(sound of bottles) ‘One more, then.’"],
+  kindstudie: ["‘If he gets into the EOS, he can study medicine later.’"],
+  milieu: ["‘The readings in the Pleiße are even worse than last year.’"],
+  vrede: ["‘They want me to take the badge off my jacket. I won't.’"],
+  samizdat: ["‘I made twenty carbon copies, the machine won't take more.’"],
+  vlucht: ["‘Through Hungary, they say. Across the lake.’"],
+  punk: ["‘They're playing in the church on Saturday, don't tell anyone.’"],
+  loyaal: ["‘The Party knows what it's doing. End of.’"],
+  klager: ["‘I'm writing another Eingabe about the heating. Third time.’"],
+  tw: ["(the clatter of a typewriter, for a long time)", "‘The ribbon's nearly gone, and the ‘e’ is crooked again.’"],
 };

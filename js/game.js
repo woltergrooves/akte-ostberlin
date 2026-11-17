@@ -7,8 +7,8 @@ import { loadModels } from "./assets.js";
 const SAVE = "akte-save-v4", ENDS = "akte-endings-v2";
 const QUOTA = { 1983: { res: 1, ims: 1 }, 1984: { res: 2, ims: 1 }, 1985: { res: 2, ims: 2 }, 1986: { res: 3, ims: 2 }, 1987: { res: 4, ims: 3 }, 1988: { res: 4, ims: 3 }, 1989: { res: 4, ims: 3 } };
 const CODES = ["Rose", "Kranich", "Falke", "Tulpe", "Sonne", "Igel", "Birke", "Anker", "Kompass", "Feder", "Linde", "Pinsel", "Rabe", "Kerze", "Glocke", "Adler", "Uhr", "Heide", "Ostsee", "Stein", "Mohn", "Wolke", "Fichte", "Brücke", "Ahorn", "Taube", "Spiegel", "Distel"];
-const ENDINGS = { overgelopen: "Overgelopen", gearresteerd: "Zelf een dossier", overgeplaatst: "Bitterfeld", nee: "De man die nee zei", major: "Genosse Major", kantoor: "Een kleine baan", werk: "‘Ik deed mijn werk’", naam: "Een naam in ieders dossier" };
-const ZERS = ["Zijn of haar post komt geopend aan, met telkens iets eruit.", "Collega's krijgen anonieme brieven met halve waarheden.", "Meubels in de woning staan verschoven als iemand thuiskomt. Er is niets gestolen.", "De autobanden zijn elke week lek. Steeds weer.", "Vrienden krijgen te horen dat er een informant in de groep zit. De verdenking valt precies op de verkeerde."];
+const ENDINGS = { overgelopen: "Defected", gearresteerd: "A file of your own", overgeplaatst: "Bitterfeld", nee: "The man who said no", major: "Genosse Major", kantoor: "A small job", werk: "‘I was doing my job’", naam: "A name in everyone's file" };
+const ZERS = ["Their post arrives opened, with something missing every time.", "Colleagues receive anonymous letters full of half-truths.", "Furniture in the flat has been moved when they come home. Nothing is stolen.", "The car tyres are flat every week. Again and again.", "Friends are told there is an informer in the group. Suspicion falls on exactly the wrong person."];
 
 let S = null, world = null;
 const $ = s => document.querySelector(s);
@@ -23,16 +23,18 @@ const turn = () => TURNS[S.t];
 const free = q => q.status === "vrij" || q.status === "zersetzt";
 const imCount = () => S.people.filter(p => p.status === "im").length;
 const pool = () => Object.keys(S.bugs).length + Object.keys(S.taps).length;
-const pron = p => p.sex === "f" ? "zij" : "hij";
-const Pron = p => p.sex === "f" ? "Ze" : "Hij";
-const trLabel = t => t === "dubbel" ? "Heeft heimelijk contact met de oppositie (dubbelspel!)" : (TRAITS[t] ? TRAITS[t].l : t);
+const pron = p => p.sex === "f" ? "she" : "he";
+const Pron = p => p.sex === "f" ? "She" : "He";
+const obj = p => p.sex === "f" ? "her" : "him";
+const STATUS_L = { vrij: "free", im: "IM", gevangen: "imprisoned", zersetzt: "zersetzt", gevlucht: "fled", uitgereisd: "emigrated", overgeplaatst: "transferred" };
+const trLabel = t => t === "dubbel" ? "Secretly in contact with the opposition (double agent!)" : (TRAITS[t] ? TRAITS[t].l : t);
 const twOf = p => p.traits.find(t => TRAITS[t] && TRAITS[t].tw);
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 function addLog(p, text) { if (p) p.log.push(`${turn().label}: ${text}`); }
 function inbox(k, title, text, pid) { S.inbox.unshift({ id: uid(), k, title, text, pid, t: S.t, read: false }); if (S.inbox.length > 60) S.inbox.length = 60; }
 function nextCode() { const c = CODES.find(c => !S.codes.includes(c)) || "X-" + S.codes.length; S.codes.push(c); return c; }
-function makeIM(p, code) { if (!p) return; p.status = "im"; p.code = code || nextCode(); if (code) S.codes.push(code); p.lies = 0; S.stats.recruits++; addLog(p, `Geworven als IM „${p.code}“`); }
+function makeIM(p, code) { if (!p) return; p.status = "im"; p.code = code || nextCode(); if (code) S.codes.push(code); p.lies = 0; S.stats.recruits++; addLog(p, `Recruited as IM „${p.code}“`); }
 
 const A = {
   p: P, people: () => S.people, rand,
@@ -82,21 +84,21 @@ function briefing(before) {
   const T = turn(); const items = S.inbox.filter(i => i.t === S.t);
   const cnt = k => items.filter(i => i.k === k).length;
   const li = [];
-  if (S.tut === 99 && S.flags._tutJustDone) { delete S.flags._tutJustDone; li.push("<b>De uitleg is klaar.</b> Vanaf nu staat onderaan steeds wat je het beste kunt doen."); }
-  if (cnt("im")) li.push(`<b>${cnt("im")} rapport${cnt("im") > 1 ? "en" : ""}</b> van je informanten liggen in <b>Dossiers</b>.`);
-  if (cnt("bug")) li.push(`<b>${cnt("bug")} afgeluisterd${cnt("bug") > 1 ? "e gesprekken" : " gesprek"}</b> liggen in <b>Dossiers</b>.`);
-  items.filter(i => i.k === "case").forEach(i => li.push(`<b>Nieuw onderzoek:</b> ${esc(i.title.replace("Onderzoek: ", ""))}. Vind de dader binnen 2 beurten.`));
+  if (S.tut === 99 && S.flags._tutJustDone) { delete S.flags._tutJustDone; li.push("<b>The tutorial is over.</b> From now on, the strip at the bottom always shows your best next move."); }
+  if (cnt("im")) li.push(`<b>${cnt("im")} report${cnt("im") > 1 ? "s" : ""}</b> from your informers ${cnt("im") > 1 ? "are" : "is"} waiting in <b>Files</b>.`);
+  if (cnt("bug")) li.push(`<b>${cnt("bug")} bugged conversation${cnt("bug") > 1 ? "s" : ""}</b> waiting in <b>Files</b>.`);
+  items.filter(i => i.k === "case").forEach(i => li.push(`<b>New case:</b> ${esc(i.title.replace("Case: ", ""))}. Find the culprit within 2 turns.`));
   items.filter(i => i.k === "warn" || i.k === "info").forEach(i => li.push(`<b>${esc(i.title)}</b>`));
-  if (!cnt("im") && !cnt("bug")) li.push(`<span class="muted">Geen nieuwe informatie. Werf informanten of plaats microfoons.</span>`);
+  if (!cnt("im") && !cnt("bug")) li.push(`<span class="muted">No new information. Recruit informers or plant bugs.</span>`);
   
   const mr = monthsToReview(); const q = S.quota;
-  modal(`<div class="kicker">Nieuwe beurt</div><h1>${esc(T.label)}</h1>
-   <ul class="brief">${li.slice(0, 4).map(x => `<li>${x}</li>`).join("")}${mr ? `<li>Jaardoel (over ${mr} beurt${mr > 1 ? "en" : ""}): <b>${S.res}/${q.res}</b> resultaten · <b>${imCount()}/${q.ims}</b> informanten</li>` : ""}<li><b>${S.mk} mankracht</b> deze beurt</li></ul>
-   <button class="next" id="nx">Aan de slag</button>`, m => m.querySelector("#nx").onclick = () => { closeModal(); setMode("office"); }, { lock: true });
+  modal(`<div class="kicker">New turn</div><h1>${esc(T.label)}</h1>
+   <ul class="brief">${li.slice(0, 4).map(x => `<li>${x}</li>`).join("")}${mr ? `<li>Annual target (in ${mr} turn${mr > 1 ? "s" : ""}): <b>${S.res}/${q.res}</b> results · <b>${imCount()}/${q.ims}</b> informers</li>` : ""}<li><b>${S.mk} manpower</b> this turn</li></ul>
+   <button class="next" id="nx">Get to work</button>`, m => m.querySelector("#nx").onclick = () => { closeModal(); setMode("office"); }, { lock: true });
 }
 
 function runLater(id) {
-  if (id === "anna-leave") { const a = P("anna"); if (a && (a.status === "vrij")) { a.status = "uitgereisd"; inbox("info", "Uitreis goedgekeurd", "Anna Weiss heeft de DDR verlaten. Haar woning in de Greifswalder Straße is al verdeeld.", "anna"); } }
+  if (id === "anna-leave") { const a = P("anna"); if (a && (a.status === "vrij")) { a.status = "uitgereisd"; inbox("info", "Exit approved", "Anna Weiss has left the GDR. Her flat in Greifswalder Straße has already been reallocated.", "anna"); } }
 }
 
 function drift() {
@@ -120,25 +122,25 @@ function imReports() {
       target = rand(c); if (!target) return;
     }
     target.pages += 2;
-    const head = `IM „${im.code}“ over ${target.name}`;
-    if (im.doubleAgent) { inbox("im", head, `‘Niets bijzonders. ${target.fn} is een rustige burger, gaat vroeg slapen.’`, target.id); return; }
+    const head = `IM „${im.code}“ on ${target.name}`;
+    if (im.doubleAgent) { inbox("im", head, `‘Nothing unusual. ${target.fn} is a quiet citizen, goes to bed early.’`, target.id); return; }
     if (R() * 100 < im.honesty) {
       const unk = target.traits.filter(t => !target.known[t]);
-      if (!unk.length) { inbox("im", head, "‘Geen nieuwe bijzonderheden.’", target.id); return; }
+      if (!unk.length) { inbox("im", head, "‘No new details.’", target.id); return; }
       const t = rand(unk); target.known[t] = { s: "IM", im: im.id };
-      inbox("im", head, `Meldt: ${trLabel(t)}.`, target.id);
+      inbox("im", head, `Reports: ${trLabel(t)}.`, target.id);
     } else {
       const opts = FAKEABLE.filter(t => !target.traits.includes(t) && !target.known[t]);
       const t = rand(opts); if (!t) return;
       target.known[t] = { s: "IM", im: im.id };
-      inbox("im", head, `Meldt: ${trLabel(t)}.`, target.id);
+      inbox("im", head, `Reports: ${trLabel(t)}.`, target.id);
     }
   });
 }
 
 function overheardLine(t, p) {
-  if (TRAITS[t] && TRAITS[t].tw) { const lbl = TRAITS[t].l; return `(lang getik van een typemachine) Technische dienst: ${lbl.toLowerCase()}.`; }
-  return rand(OVERHEARD[t] || ["(onverstaanbaar)"]);
+  if (TRAITS[t] && TRAITS[t].tw) { const lbl = TRAITS[t].l; return `(long clatter of a typewriter) Technical service: ${lbl.toLowerCase()}.`; }
+  return rand(OVERHEARD[t] || ["(inaudible)"]);
 }
 function reveal(p, t, how) { p.known[t] = { s: "zeker" }; return `${how}: ${p.name} — ${trLabel(t)}`; }
 
@@ -153,10 +155,10 @@ function bugReports() {
       p.known[t] = { s: "zeker" }; p.pages += 3;
       lines.push(`${p.name}: ${overheardLine(t, p)}\n→ ${trLabel(t)}`);
     }
-    if (lines.length) inbox("bug", `Afluisteren: ${Bd(bid).name}`, lines.join("\n\n"));
+    if (lines.length) inbox("bug", `Bugged: ${Bd(bid).name}`, lines.join("\n\n"));
     if (ppl.some(p => p.dis > 50 && p.status === "vrij") && R() < 0.09) {
       delete S.bugs[bid]; S.onrust = clamp(S.onrust + 4);
-      inbox("warn", "Microfoon ontdekt!", `In ${Bd(bid).name} is een van je microfoons gevonden. Het verhaal gaat als een lopend vuurtje door de wijk.`);
+      inbox("warn", "Bug discovered!", `One of your bugs has been found in ${Bd(bid).name}. The story spreads through the district like wildfire.`);
     }
   });
 }
@@ -166,18 +168,18 @@ function tapReports() {
     const pref = ["westfam", "ausreise", "affaire", "zwart", "schulden", "vlucht", "samizdat"];
     const unk = p.traits.filter(t => !p.known[t] || p.known[t].s !== "zeker");
     const t = unk.find(t => pref.includes(t)) || rand(unk);
-    if (t) { p.pages += 3; inbox("bug", `Telefoontap: ${p.name}`, `${overheardLine(t, p)}\n→ ${reveal(p, t, "Bevestigd")}`, p.id); }
+    if (t) { p.pages += 3; inbox("bug", `Phone tap: ${p.name}`, `${overheardLine(t, p)}\n→ ${reveal(p, t, "Confirmed")}`, p.id); }
   });
 }
 function fuchsTick() {
   if (!S.flags.fuchsMet || turn().y < 1988) return;
-  if (S.fuchs >= 50 && R() < 0.3) { S.dossier = clamp(S.dossier + 5); inbox("warn", "Fuchs", "Oberleutnant Fuchs heeft een interne notitie over jou geschreven. Je hoort het via de secretaresse. (Eigen dossier +5)"); }
-  else if (S.fuchs >= 25 && S.res > 0 && R() < 0.2) { S.res--; inbox("warn", "Fuchs", "Fuchs heeft bij Kessler een van jouw resultaten als het zijne gepresenteerd. (Resultaten −1)"); }
+  if (S.fuchs >= 50 && R() < 0.3) { S.dossier = clamp(S.dossier + 5); inbox("warn", "Fuchs", "Oberleutnant Fuchs has written an internal memo about you. You hear it from the secretary. (Suspicion +5)"); }
+  else if (S.fuchs >= 25 && S.res > 0 && R() < 0.2) { S.res--; inbox("warn", "Fuchs", "Fuchs presented one of your results to Kessler as his own. (Results −1)"); }
 }
 function flights() {
   const T = turn(); if (!T.flight) return;
   S.people.filter(p => p.status === "vrij" && !p.family && (p.traits.includes("vlucht") || p.traits.includes("ausreise")) && p.dis > 20).forEach(p => {
-    if (R() < 0.4) { p.status = "gevlucht"; addLog(p, "Gevlucht via Hongarije"); inbox("info", "Gevlucht", `${p.name} (${p.job}) is via Hongarije naar het Westen gevlucht. De woning staat leeg, de radio staat nog aan.`, p.id); }
+    if (R() < 0.4) { p.status = "gevlucht"; addLog(p, "Fled via Hungary"); inbox("info", "Fled", `${p.name} (${p.job}) has fled to the West via Hungary. The flat is empty, the radio is still on.`, p.id); }
   });
 }
 
@@ -207,14 +209,14 @@ function newCase() {
   if (decoy && R() < 0.6) { decoy.traits.push(tw); decoy.twChecked = false; }
   S.case = c;
   let note = "";
-  if (prev) { const inn = P(prev.innocent); note = `\n\nLetteranalyse: dezelfde typemachine als in de zaak van ${prev.month}. Maar toen werd ${inn.name} aangewezen. Dan was ${pron(inn)} het dus niet.`; S.geweten = clamp(S.geweten - 8); prev.note = true; }
+  if (prev) { const inn = P(prev.innocent); note = `\n\nTypeface analysis: the same typewriter as in the case of ${prev.month}. But back then ${inn.name} was named as the culprit. So it wasn't ${obj(inn)} after all.`; S.geweten = clamp(S.geweten - 8); prev.note = true; }
   c.note = note;
-  inbox("case", `Onderzoek: ${INCIDENTS[c.tmpl].t}`, INCIDENTS[c.tmpl].d + note);
+  inbox("case", `Case: ${INCIDENTS[c.tmpl].t}`, INCIDENTS[c.tmpl].d + note);
 }
 function clueText(c, k) {
-  if (k === "tw") return `Lettertype-analyse: ${TRAITS[c.tw].l.toLowerCase()}.`;
-  if (k === "paper") return `Papier: ${WORKPLACES[c.work].paper}.`;
-  if (k === "place") return `Verspreid in het trappenhuis van ${Bd(c.home).name}; de dader woont daar vermoedelijk.`;
+  if (k === "tw") return `Typeface analysis: ${TRAITS[c.tw].l.toLowerCase()}.`;
+  if (k === "paper") return `Paper: ${WORKPLACES[c.work].paper}.`;
+  if (k === "place") return `Distributed in the stairwell of ${Bd(c.home).name}; the culprit probably lives there.`;
 }
 
 // ---------- gebeurtenissen ----------
@@ -237,19 +239,19 @@ function applyE(e) {
 function chips(e) {
   if (!e) return "";
   const o = []; const f = (k, l, goodUp) => { if (e[k]) { const up = e[k] > 0; o.push(`<span class="chip ${up === goodUp ? "up" : "down"}">${l} ${up ? "+" : ""}${e[k]}</span>`); } };
-  f("g", "Gunst", true); f("c", "Geweten", true); f("d", "Verdenking", false); f("fam", "Gezin", true); f("res", "Resultaat", true); f("mk", "Mankracht", true);
-  if (e.fu) o.push(`<span class="chip ${e.fu > 0 ? "down" : "up"}">Rivaliteit Fuchs ${e.fu > 0 ? "+" : ""}${e.fu}</span>`);
+  f("g", "Favour", true); f("c", "Conscience", true); f("d", "Suspicion", false); f("fam", "Family", true); f("res", "Result", true); f("mk", "Manpower", true);
+  if (e.fu) o.push(`<span class="chip ${e.fu > 0 ? "down" : "up"}">Rivalry Fuchs ${e.fu > 0 ? "+" : ""}${e.fu}</span>`);
   return o.length ? `<div class="chips">${o.join("")}</div>` : "";
 }
-const sub = (s, ctx) => ctx ? String(s).replace(/\{Z\}/g, ctx.Z || "Hij") : s;
+const sub = (s, ctx) => ctx ? String(s).replace(/\{Z\}/g, ctx.Z || "He") : s;
 
 function openEvent(q) {
   if (!q || !S.queue.includes(q)) { rerender(); return; }   // al afgehandeld
   const e = ev(q); const ctx = q.ctx;
   const text = sub(ctx && ctx.text ? ctx.text : e.text, ctx);
   const choices = e.choices.filter(c => !c.cond || c.cond(S));
-  modal(`<div class="stamp">${e.via === "gezin" ? "PRIVÉ" : "STRENG GEHEIM"}</div>
-    <div class="kicker">${esc(turn().label)}${e.src ? " · Bron: " + esc(e.src) : ""}</div>
+  modal(`<div class="stamp">${e.via === "gezin" ? "PRIVAT" : "STRENG GEHEIM"}</div>
+    <div class="kicker">${esc(turn().label)}${e.src ? " · Source: " + esc(e.src) : ""}</div>
     <h1>${esc(e.title)}</h1>${e.who ? `<div class="who">${esc(e.who)}</div>` : ""}
     <div class="report">${esc(text)}</div>${e.note ? `<p class="note"><i>${esc(e.note)}</i></p>` : ""}
     <div class="choices">${choices.map((c, k) => `<button class="ch" data-k="${k}"><b>${esc(c.t)}</b>${c.d ? `<span>${esc(c.d)}</span>` : ""}</button>`).join("")}</div>`,
@@ -266,81 +268,81 @@ function chooseEvent(q, c) {
   if (e.id === "fuchs") S.flags.fuchsMet = true;
   save(); refresh(); rerender();
   modal(`<div class="kicker">${esc(turn().label)} · ${esc(c.t)}</div><h1>${esc(e.title)}</h1>
-    <div class="result">${esc(sub(c.r, q.ctx))}</div>${chips(c.e)}<button class="next" id="nx">${c.end ? "Verder →" : "Terug naar het werk"}</button>`,
+    <div class="result">${esc(sub(c.r, q.ctx))}</div>${chips(c.e)}<button class="next" id="nx">${c.end ? "Continue →" : "Back to work"}</button>`,
     m => m.querySelector("#nx").onclick = () => { closeModal(); if (c.end) return finish(c.flag === "fled" ? "overgelopen" : null); if (!checkOver()) nextPending(); }, { lock: true });
 }
 function nextPending() { const q = S.queue.find(q => ev(q).via === "telefoon"); if (q) world.setRinging(true); }
 
 // ---------- acties ----------
-function spend(n) { if (S.mk < n) { toast("Niet genoeg mankracht deze beurt."); return false; } S.mk -= n; return true; }
+function spend(n) { if (S.mk < n) { toast("Not enough manpower this turn."); return false; } S.mk -= n; return true; }
 function after(msg, e) { applyE(e); save(); refresh(); if (checkOver()) return; rerender(); if (msg) flash(msg + chips(e)); }
 
 const ACT = {
   observe(p) {
-    if (!spend(1)) return; S.stats.observe++; tutDone(4); p.pages += 5; addLog(p, "Geobserveerd");
+    if (!spend(1)) return; S.stats.observe++; tutDone(4); p.pages += 5; addLog(p, "Observed");
     const lines = []; const hidden = p.traits.filter(t => !p.known[t] || p.known[t].s !== "zeker");
-    Object.keys(p.known).forEach(t => { const k = p.known[t]; if (k.s === "IM" && !p.traits.includes(t)) { const im = P(k.im); delete p.known[t]; if (im) { im.lies = (im.lies || 0) + 1; lines.push(`✗ Weerlegd: „${trLabel(t)}“. IM „${im.code}“ heeft gelogen.`); } } });
+    Object.keys(p.known).forEach(t => { const k = p.known[t]; if (k.s === "IM" && !p.traits.includes(t)) { const im = P(k.im); delete p.known[t]; if (im) { im.lies = (im.lies || 0) + 1; lines.push(`✗ Disproved: „${trLabel(t)}“. IM „${im.code}“ lied.`); } } });
     let got = 0;
     p.twChecked = true;
     hidden.forEach(t => { if (R() < (TRAITS[t].tw ? 1 : 0.55)) { lines.push("✓ " + trLabel(t)); p.known[t] = { s: "zeker" }; got++; } });
     if (!got && hidden.length) { const t = rand(hidden); p.known[t] = { s: "zeker" }; lines.push("✓ " + trLabel(t)); }
     if (p.status === "im" && p.doubleAgent && !p.known.dubbel && R() < 0.5) { p.known.dubbel = { s: "zeker" }; lines.push("" + trLabel("dubbel")); }
-    if (!lines.length) lines.push("Niets nieuws. Een saai leven, of een voorzichtig leven.");
-    after(`<h1>Observatie: ${esc(p.name)}</h1><div class="result">${lines.map(esc).join("\n")}</div><div class="advice">${personAdvice(p)}</div>`);
+    if (!lines.length) lines.push("Nothing new. A dull life, or a careful one.");
+    after(`<h1>Observation: ${esc(p.name)}</h1><div class="result">${lines.map(esc).join("\n")}</div><div class="advice">${personAdvice(p)}</div>`);
   },
   post(p) {
-    if (!spend(1)) return; p.pages += 4; addLog(p, "Postcontrole");
+    if (!spend(1)) return; p.pages += 4; addLog(p, "Post checked");
     const set = ["westfam", "ausreise", "samizdat", "klager", "vlucht", "kindstudie"];
     const found = p.traits.filter(t => set.includes(t)); found.forEach(t => p.known[t] = { s: "zeker" });
-    after(`<h1>Postcontrole: ${esc(p.name)}</h1><div class="result">${found.length ? found.map(t => "✓ " + esc(trLabel(t))).join("\n") : "Brieven van een tante over het weer. Niets opvallends."}</div>`);
+    after(`<h1>Post check: ${esc(p.name)}</h1><div class="result">${found.length ? found.map(t => "✓ " + esc(trLabel(t))).join("\n") : "Letters from an aunt about the weather. Nothing of note."}</div>`);
   },
   tap(p) {
     if (S.taps[p.id]) { delete S.taps[p.id]; return after(null); }
-    if (pool() >= rank().bugs) return toast(`Al je apparatuur is in gebruik (${rank().bugs}).`);
-    if (!spend(1)) return; S.taps[p.id] = S.t; addLog(p, "Telefoon getapt");
-    after(`<h1>Telefoontap geplaatst</h1><div class="result">Vanaf de volgende beurt luister je mee met ${esc(p.name)}.</div>`, { c: -1 });
+    if (pool() >= rank().bugs) return toast(`All your equipment is in use (${rank().bugs}).`);
+    if (!spend(1)) return; S.taps[p.id] = S.t; addLog(p, "Phone tapped");
+    after(`<h1>Phone tap installed</h1><div class="result">From next turn you will be listening in on ${esc(p.name)}.</div>`, { c: -1 });
   },
   warn(p) {
-    if (!spend(1)) return; p.dis = Math.max(0, p.dis - 18); p.fear += 25; p.pages += 3; addLog(p, "Waarschuwingsgesprek");
-    after(`<h1>Waarschuwingsgesprek</h1><div class="result">${esc(p.name)} wordt opgehaald voor ‘een verduidelijking van enkele zaken’. Twee uur later staat ${pron(p)} weer buiten. Bleek.</div>`, { c: -3, g: 1, o: -1, d: p.family ? 3 : 0 });
+    if (!spend(1)) return; p.dis = Math.max(0, p.dis - 18); p.fear += 25; p.pages += 3; addLog(p, "Warning interview");
+    after(`<h1>Warning interview</h1><div class="result">${esc(p.name)} is picked up for ‘the clarification of a few matters’. Two hours later ${pron(p)} is back outside. Pale.</div>`, { c: -3, g: 1, o: -1, d: p.family ? 3 : 0 });
   },
   recruit(p, how) {
-    if (imCount() >= rank().ims) return toast(`Je kunt als ${rank().id} maximaal ${rank().ims} IM's leiden.`);
+    if (imCount() >= rank().ims) return toast(`As ${rank().id} you can run at most ${rank().ims} IMs.`);
     if (!spend(1)) return;
     const chance = recruitChance(p, how), cost = how === "gunst" ? 2 : 5 + (TRAITS[how].lev || 1) * 2;
     if (R() < chance) {
       makeIM(p); p.pages += 10;
-      after(`<h1>Getekend</h1><div class="result">${esc(p.name)} tekent de Verpflichtungserklärung. Codenaam: <b>„${esc(p.code)}“</b>.\n\nVanaf de volgende beurt rapporteert ${pron(p)} over buren en collega's.</div>`, { c: -cost, g: 3 });
+      after(`<h1>Signed</h1><div class="result">${esc(p.name)} signs the Verpflichtungserklärung, the pledge to cooperate. Codename: <b>„${esc(p.code)}“</b>.\n\nFrom next turn ${pron(p)} reports on neighbours and colleagues.</div>`, { c: -cost, g: 3 });
     } else {
-      p.dis = Math.min(95, p.dis + 12); p.fear += 10; p.pages += 5; addLog(p, "Weigerde IM te worden");
+      p.dis = Math.min(95, p.dis + 12); p.fear += 10; p.pages += 5; addLog(p, "Refused to become an IM");
       const told = R() < 0.35;
-      after(`<h1>Geweigerd</h1><div class="result">${esc(p.name)} weigert te tekenen.${told ? `\n\nErger: ${pron(p)} vertelt het in de wijk rond.` : ""}</div>`, { c: -Math.ceil(cost / 2), o: told ? 3 : 1, d: told ? 3 : 0 });
+      after(`<h1>Refused</h1><div class="result">${esc(p.name)} refuses to sign.${told ? `\n\nWorse: ${pron(p)} tells people in the district.` : ""}</div>`, { c: -Math.ceil(cost / 2), o: told ? 3 : 1, d: told ? 3 : 0 });
     }
   },
   zersetzung(p) {
-    if (p.pages < 15) return toast("Je weet te weinig van deze persoon (dossier < 15 pagina's).");
+    if (p.pages < 15) return toast("You know too little about this person (file < 15 pages).");
     if (!spend(2)) return;
     const hostile = p.dis >= 30; p.dis = Math.max(0, p.dis - 45); p.status = "zersetzt"; p.pages += 25; S.stats.zersetzung++; addLog(p, "Zersetzung");
-    after(`<h1>Maßnahme: Zersetzung</h1><div class="result">${esc(rand(ZERS))}\n\nBinnen een paar maanden vertrouwt ${esc(p.name)} niemand meer. Precies de bedoeling.</div>`, { c: -12, g: hostile ? 5 : 1, res: hostile ? 1 : 0, o: -2 });
+    after(`<h1>Maßnahme: Zersetzung</h1><div class="result">${esc(rand(ZERS))}\n\nWithin a few months ${esc(p.name)} trusts nobody any more. Exactly as intended.</div>`, { c: -12, g: hostile ? 5 : 1, res: hostile ? 1 : 0, o: -2 });
   },
   arrest(p) {
-    if (!evidence(p)) return toast("Te weinig bewijs: minstens twee bevestigde verdachte kenmerken nodig.");
+    if (!evidence(p)) return toast("Not enough evidence: you need at least two confirmed suspicious traits.");
     if (!spend(2)) return;
-    const hostile = p.dis >= 30; p.status = "gevangen"; p.pages += 20; S.stats.arrests++; addLog(p, "Gearresteerd, overgebracht naar Hohenschönhausen");
-    if (p.family) { S.flags.betray = true; S.fates[p.id] = "Werd door zijn eigen broer gearresteerd. Zat veertien maanden in Bautzen. Heeft nooit meer een woord met je gewisseld."; }
+    const hostile = p.dis >= 30; p.status = "gevangen"; p.pages += 20; S.stats.arrests++; addLog(p, "Arrested, taken to Hohenschönhausen");
+    if (p.family) { S.flags.betray = true; S.fates[p.id] = "Was arrested by his own brother. Spent fourteen months in Bautzen. Never exchanged another word with you."; }
     const late = turn().y >= 1988;
-    after(`<h1>Arrestatie</h1><div class="result">Om vijf uur 's ochtends. ${esc(p.name)} mag een tas inpakken. De buren kijken door de kieren van hun deuren.${late ? "\n\nMaar in 1988 werkt angst anders: de volgende zondag zit de kerk voller dan ooit." : ""}</div>`, { c: hostile ? -8 : -15, g: hostile ? 6 : 2, res: hostile ? 1 : 0, o: late ? 2 : -4, fam: p.family ? -30 : 0 });
+    after(`<h1>Arrest</h1><div class="result">Five in the morning. ${esc(p.name)} is allowed to pack a bag. The neighbours watch through the cracks of their doors.${late ? "\n\nBut by now fear works differently: the following Sunday the church is fuller than ever." : ""}</div>`, { c: hostile ? -8 : -15, g: hostile ? 6 : 2, res: hostile ? 1 : 0, o: late ? 2 : -4, fam: p.family ? -30 : 0 });
   },
-  assign(im, target) { if (!spend(1)) return; im.assign = target.id; addLog(im, `Opdracht: ${target.name}`); after(`<h1>Opdracht gegeven</h1><div class="result">IM „${esc(im.code)}“ richt zich de volgende beurt op ${esc(target.name)}.</div>`); },
-  drop(im) { im.status = "vrij"; addLog(im, "Afgestoten als IM"); after(`<h1>IM afgestoten</h1><div class="result">„${esc(im.code)}“ hoort niets meer van je. Het dossier verdwijnt in het archief.</div>`); },
-  geur(p) { if (!S.case || !spend(1)) return; S.case.geur[p.id] = p.id === S.case.culprit; addLog(p, "Geurmonster afgenomen"); after(`<h1>Geurmonster</h1><div class="result">Een speurhond ruikt aan het pamflet en aan een doek uit de stoel van ${esc(p.name)}.\n\n${S.case.geur[p.id] ? "De hond slaat aan." : "De hond reageert niet."}</div>`, { c: -2 }); },
+  assign(im, target) { if (!spend(1)) return; im.assign = target.id; addLog(im, `Assignment: ${target.name}`); after(`<h1>Assignment given</h1><div class="result">Next turn IM „${esc(im.code)}“ will focus on ${esc(target.name)}.</div>`); },
+  drop(im) { im.status = "vrij"; addLog(im, "Dropped as an IM"); after(`<h1>IM dropped</h1><div class="result">„${esc(im.code)}“ never hears from you again. The file disappears into the archive.</div>`); },
+  geur(p) { if (!S.case || !spend(1)) return; S.case.geur[p.id] = p.id === S.case.culprit; addLog(p, "Scent sample taken"); after(`<h1>Scent sample</h1><div class="result">A tracker dog sniffs the leaflet and a cloth from ${esc(p.name)}'s chair.\n\n${S.case.geur[p.id] ? "The dog reacts." : "The dog shows no interest."}</div>`, { c: -2 }); },
   bug(bid) {
     if (S.bugs[bid]) { delete S.bugs[bid]; return after(null); }
-    if (pool() >= rank().bugs) return toast(`Al je apparatuur is in gebruik (${rank().bugs}).`);
+    if (pool() >= rank().bugs) return toast(`All your equipment is in use (${rank().bugs}).`);
     if (!spend(2)) return; S.bugs[bid] = S.t;
-    after(`<h1>Microfoons geplaatst</h1><div class="result">Een ‘loodgieter’ en een ‘schoorsteenveger’ bezoeken ${esc(Bd(bid).name)}. Vanaf de volgende beurt luister je mee.</div>`, { c: -1 });
+    after(`<h1>Bugs planted</h1><div class="result">A ‘plumber’ and a ‘chimney sweep’ visit ${esc(Bd(bid).name)}. From next turn you are listening in.</div>`, { c: -1 });
   },
-  home() { if (S.home) return toast("Je bent deze beurt al eens vroeg naar huis gegaan."); if (!spend(1)) return; S.home = true; after(`<h1>Vroeg naar huis</h1><div class="result">${rand(["Je eet met Katrin en Jens aan tafel. Niemand vraagt hoe je dag was.", "Jens laat je zijn huiswerk Russisch zien. Je helpt hem met de naamvallen.", "Katrin zet een plaat op. Jullie dansen in de keuken, heel even."])}</div>`, { fam: 7, c: 1 }); },
+  home() { if (S.home) return toast("You already went home early this turn."); if (!spend(1)) return; S.home = true; after(`<h1>Home early</h1><div class="result">${rand(["You eat at the table with Katrin and Jens. Nobody asks how your day was.", "Jens shows you his Russian homework. You help him with the cases.", "Katrin puts a record on. You dance in the kitchen, just for a moment."])}</div>`, { fam: 7, c: 1 }); },
 };
 function recruitChance(p, how) { const c = how === "gunst" ? 0.2 + p.loyal / 180 - p.dis / 250 : 0.32 + (TRAITS[how].lev || 1) * 0.16 + p.fear / 250 - p.dis / 300; return Math.max(0.05, Math.min(0.95, c)); }
 function bestLever(p) { return Object.keys(p.known).filter(t => TRAITS[t] && TRAITS[t].lev && p.known[t].s === "zeker").sort((a, b) => TRAITS[b].lev - TRAITS[a].lev)[0] || "gunst"; }
@@ -349,26 +351,26 @@ function evidence(p) { return p.caught || Object.keys(p.known).filter(t => p.kno
 function accuse(p) {
   const c = S.case; if (!c) return;
   const right = p.id === c.culprit;
-  S.case = null; p.caught = true; p.pages += 15; addLog(p, `Aangewezen als dader: ${INCIDENTS[c.tmpl].t.toLowerCase()}`);
+  S.case = null; p.caught = true; p.pages += 15; addLog(p, `Named as the culprit: ${INCIDENTS[c.tmpl].t.toLowerCase()}`);
   if (right) { S.stats.solved++; applyE({ g: 6, res: 1 }); }
   else { S.stats.wrong++; S.wrongs.push({ innocent: p.id, culprit: c.culprit, month: turn().label }); applyE({ g: 4, res: 1 }); }
   save(); refresh();
   const opts = [
-    { t: "Arresteren", d: "Hohenschönhausen. Een voorbeeld.", f: () => { p.status = "gevangen"; S.stats.arrests++; addLog(p, "Gearresteerd"); return { c: -8, o: turn().y >= 1988 ? 2 : -4, g: 3 }; } },
-    { t: "Werven als IM", d: imCount() >= rank().ims ? "Geen plek in je netwerk." : "Wie betrapt is, tekent snel.", dis: imCount() >= rank().ims, f: () => { makeIM(p); return { c: -6 }; } },
-    { t: "Laten lopen", d: "Bang maken en vrijlaten.", f: () => { p.dis = Math.max(0, p.dis - 25); p.fear += 30; return { c: -2, g: -2 }; } },
+    { t: "Arrest", d: "Hohenschönhausen. An example.", f: () => { p.status = "gevangen"; S.stats.arrests++; addLog(p, "Arrested"); return { c: -8, o: turn().y >= 1988 ? 2 : -4, g: 3 }; } },
+    { t: "Recruit as IM", d: imCount() >= rank().ims ? "No room in your network." : "Those who are caught sign quickly.", dis: imCount() >= rank().ims, f: () => { makeIM(p); return { c: -6 }; } },
+    { t: "Let them go", d: "Frighten and release.", f: () => { p.dis = Math.max(0, p.dis - 25); p.fear += 30; return { c: -2, g: -2 }; } },
   ];
-  modal(`<div class="stamp">ERMITTELT</div><div class="kicker">Onderzoek afgerond</div><h1>${esc(p.name)}</h1>
-   <div class="result">Kessler is tevreden: ‘Goed werk. De dader is gevonden.’ Hij vraagt niet hoe zeker je bent.\n\nWat gebeurt er met ${esc(p.name)}?</div>
+  modal(`<div class="stamp">ERMITTELT</div><div class="kicker">Case closed</div><h1>${esc(p.name)}</h1>
+   <div class="result">Kessler is pleased: ‘Good work. The culprit has been found.’ He doesn't ask how sure you are.\n\nWhat happens to ${esc(p.name)}?</div>
    <div class="choices">${opts.map((o, k) => `<button class="ch" data-k="${k}" ${o.dis ? "disabled" : ""}><b>${o.t}</b><span>${esc(o.d)}</span></button>`).join("")}</div>`,
-    m => m.querySelectorAll("button.ch").forEach(b => b.onclick = () => { const e = opts[+b.dataset.k].f(); applyE(e); save(); refresh(); closeModal(); if (!checkOver()) flash(`<h1>Zaak gesloten</h1><div class="result">${esc(p.name)}: het dossier krijgt een stempel.</div>` + chips(e)); }), { lock: true });
+    m => m.querySelectorAll("button.ch").forEach(b => b.onclick = () => { const e = opts[+b.dataset.k].f(); applyE(e); save(); refresh(); closeModal(); if (!checkOver()) flash(`<h1>Case closed</h1><div class="result">${esc(p.name)}: the file gets its stamp.</div>` + chips(e)); }), { lock: true });
 }
 
 // ---------- maand afsluiten ----------
 function endTurn() {
-  if (S.queue.length) { toast("Eerst de wachtende zaken afhandelen."); return openEvent(S.queue[0]); }
+  if (S.queue.length) { toast("Deal with the waiting matters first."); return openEvent(S.queue[0]); }
   const c = S.case;
-  if (c) { c.turns--; if (c.turns <= 0) { S.case = null; applyE({ g: -6, o: 4 }); inbox("warn", "Onderzoek onopgelost", `${INCIDENTS[c.tmpl].t}: de dader is nooit gevonden. Kessler noteert het. (Gunst −6)`); } }
+  if (c) { c.turns--; if (c.turns <= 0) { S.case = null; applyE({ g: -6, o: 4 }); inbox("warn", "Case unsolved", `${INCIDENTS[c.tmpl].t}: the culprit was never found. Kessler makes a note of it. (Favour −6)`); } }
   if (checkOver()) return;
   const T = turn();
   if (T.review) return review(() => advance());
@@ -383,15 +385,15 @@ function advance() {
 }
 function review(next) {
   const q = S.quota, ims = imCount(); const okR = S.res >= q.res, okI = ims >= q.ims;
-  const lines = [`Resultaten: ${S.res} van ${q.res} ${okR ? "✓" : "✗"}`, `Actieve IM's: ${ims} van ${q.ims} ${okI ? "✓" : "✗"}`];
+  const lines = [`Results: ${S.res} of ${q.res} ${okR ? "✓" : "✗"}`, `Active IMs: ${ims} of ${q.ims} ${okI ? "✓" : "✗"}`];
   let e = {};
-  if (okR && okI) { if (S.rank < RANKS.length - 1) { S.rank++; lines.push(`\nKessler: ‘Uitstekend. Er wordt over u gesproken op de Normannenstraße.’\n\nBevorderd tot ${rank().id}! Meer mankracht (${rank().mk}), ruimte voor ${rank().ims} IM's en ${rank().bugs} afluistersets.${rank().unlock ? ` Nieuw: ${rank().unlock}.` : ""}`); } else lines.push("\nKessler: ‘Ik heb niets op u aan te merken.’ Een premie van 500 mark."); e = { g: 8 }; }
-  else if (okR || okI) { lines.push("\nKessler: ‘Voldoende. Maar ik verwacht meer ijver.’ Geen bevordering dit jaar."); }
-  else { lines.push("\nKessler sluit de deur. ‘Ik begin me af te vragen aan welke kant u staat, kameraad.’ Er komt een notitie in je personeelsdossier."); e = { g: -12, d: 8 }; }
-  if (turn().y === 1987 && S.flags.leak) { lines.push("\nBij het afscheid: ‘Iemand heeft die kerk gewaarschuwd. Ik kom er nog achter wie.’"); e.d = (e.d || 0) + 6; }
-  if (turn().y === 1988 && S.flags.cover) { lines.push("\nKessler legt een kopie op tafel. Het rapport over je broer. ‘Het origineel is zoekgeraakt. Vreemd, niet?’"); e.d = (e.d || 0) + 8; e.g = (e.g || 0) - 5; }
+  if (okR && okI) { if (S.rank < RANKS.length - 1) { S.rank++; lines.push(`\nKessler: ‘Excellent. They are talking about you at Normannenstraße.’\n\nPromoted to ${rank().id}! More manpower (${rank().mk}), room for ${rank().ims} IMs and ${rank().bugs} bugging sets.${rank().unlock ? ` New: ${rank().unlock}.` : ""}`); } else lines.push("\nKessler: ‘I have nothing to criticise.’ A bonus of 500 marks."); e = { g: 8 }; }
+  else if (okR || okI) { lines.push("\nKessler: ‘Adequate. But I expect more zeal.’ No promotion this year."); }
+  else { lines.push("\nKessler closes the door. ‘I am beginning to wonder whose side you are on, comrade.’ A note goes into your personnel file."); e = { g: -12, d: 8 }; }
+  if (turn().y === 1987 && S.flags.leak) { lines.push("\nAs you leave: ‘Someone warned that church. I will find out who.’"); e.d = (e.d || 0) + 6; }
+  if (turn().y === 1988 && S.flags.cover) { lines.push("\nKessler puts a copy on the table. The report about your brother. ‘The original went missing. Strange, isn't it?’"); e.d = (e.d || 0) + 8; e.g = (e.g || 0) - 5; }
   applyE(e); save(); refresh();
-  modal(`<div class="stamp">BEURTEILUNG</div><div class="kicker">${esc(turn().label)}</div><h1>Jaarbeoordeling ${turn().y}</h1><div class="result">${esc(lines.join("\n"))}</div>${chips(e)}<button class="next" id="nx">Verder →</button>`,
+  modal(`<div class="stamp">BEURTEILUNG</div><div class="kicker">${esc(turn().label)}</div><h1>Annual assessment ${turn().y}</h1><div class="result">${esc(lines.join("\n"))}</div>${chips(e)}<button class="next" id="nx">Continue →</button>`,
     m => m.querySelector("#nx").onclick = () => { closeModal(); next(); }, { lock: true });
 }
 function checkOver() {
@@ -408,42 +410,42 @@ function finish(cause) {
   if (!id) id = F.refuse && g >= 50 ? "nee" : (S.rank >= 3 && g < 45) ? "major" : g >= 60 ? "kantoor" : g >= 30 ? "werk" : "naam";
   S.over = id; addEnding(id); clearSave();
   const T = {
-    overgelopen: ["Overgelopen", "In september 1989 sta je met je gezin in een opvangkamp in Passau. Je vertelt de West-Duitse inlichtingendienst alles wat je weet. In Oost-Berlijn word je bij verstek veroordeeld wegens ‘Fahnenflucht’. Twee maanden later valt de muur, en doet het er niet meer toe. Of juist wel."],
-    gearresteerd: ["Nu ben jij het dossier", "Om vijf uur 's ochtends wordt er aangebeld. Twee collega's die je kent van de kantine. ‘Kommen Sie bitte mit.’ In Hohenschönhausen stellen ze je dezelfde vragen die jij anderen stelde. Ze weten alles. Natuurlijk weten ze alles."],
-    overgeplaatst: ["Bitterfeld", "Kessler laat je overplaatsen naar de bewaking van een chemiekombinaat in Bitterfeld. De lucht stinkt naar zwavel. Je controleert vrachtwagens tot de muur valt, en daarna niemand meer."],
-    nee: ["De man die nee zei", "Na 1990 word je getuige bij de commissie die de Stasi onderzoekt. Je weigering van 7 oktober staat zwart op wit in Kesslers notities. Het maakt niet alles goed. Maar het telt."],
-    major: ["Genosse Major", "Je hebt het gemaakt: Major, eigen afdeling, eigen chauffeur. Een jaar lang. In 1990 sta je met tweeduizend andere officieren op straat. Je procedeert tot 1999 over je pensioen. Je wint."],
-    kantoor: ["Een kleine baan", "Je wordt na de hereniging ontslagen, zoals iedereen van het ministerie. Je werkt jaren als bewaker bij een parkeergarage. Soms herkent iemand je. Meestal knikken ze alleen."],
-    werk: ["‘Ik deed mijn werk’", "Je zegt het vaak, na 1990. Op verjaardagen, tegen je kinderen, tegen jezelf. Hoe vaker je het zegt, hoe minder het klinkt als een antwoord."],
-    naam: ["Een naam in ieders dossier", "Toen de dossiers opengingen, stond jouw naam in honderden mappen. Mensen die je nooit had ontmoet wisten precies wie je was. Je verhuist naar een stad waar niemand je kent."],
+    overgelopen: ["Defected", "In September 1989 you and your family are in a reception camp in Passau. You tell West German intelligence everything you know. In East Berlin you are sentenced in absentia for ‘Fahnenflucht’, desertion. Two months later the Wall falls, and it no longer matters. Or perhaps it matters more."],
+    gearresteerd: ["Now you are the file", "At five in the morning the doorbell rings. Two colleagues you know from the canteen. ‘Kommen Sie bitte mit.’ In Hohenschönhausen they ask you the same questions you asked others. They know everything. Of course they know everything."],
+    overgeplaatst: ["Bitterfeld", "Kessler has you transferred to security at a chemical combine in Bitterfeld. The air stinks of sulphur. You check lorries until the Wall falls, and after that nobody at all."],
+    nee: ["The man who said no", "After 1990 you become a witness for the commission investigating the Stasi. Your refusal of 7 October is there in black and white in Kessler's notes. It doesn't make everything right. But it counts."],
+    major: ["Genosse Major", "You made it: Major, your own department, your own driver. For one year. In 1990 you are out on the street with two thousand other officers. You fight a court case over your pension until 1999. You win."],
+    kantoor: ["A small job", "After reunification you are dismissed, like everyone from the Ministry. For years you work as an attendant in a car park. Sometimes someone recognises you. Usually they just nod."],
+    werk: ["‘I was doing my job’", "You say it often, after 1990. At birthday parties, to your children, to yourself. The more often you say it, the less it sounds like an answer."],
+    naam: ["A name in everyone's file", "When the files were opened, your name was in hundreds of folders. People you had never met knew exactly who you were. You move to a city where nobody knows you."],
   }[id];
-  const files = F.shred ? "Op 15 januari 1990 bestormen burgers het hoofdkwartier aan de Normannenstraße. Ze vinden duizenden zakken versnipperd papier. Een deel ervan wordt tot op de dag van vandaag weer in elkaar gepuzzeld, ook jouw zakken."
-    : F.keep ? "Op 15 januari 1990 bestormen burgers het hoofdkwartier. Jouw kast is intact. Dankzij dossiers zoals die van jou kunnen mensen vanaf 1992 lezen wat er met hun leven is gebeurd."
-      : F.walk ? "Terwijl jij bij de Bornholmer Straße stond, versnipperden je collega's de halve nacht door. Jouw dossiers lagen er nog toen de burgers in januari 1990 binnenkwamen."
+  const files = F.shred ? "On 15 January 1990 citizens storm the headquarters on Normannenstraße. They find thousands of sacks of shredded paper. Some of it is still being pieced back together today, your sacks included."
+    : F.keep ? "On 15 January 1990 citizens storm the headquarters. Your cupboard is intact. Thanks to files like yours, from 1992 people can read what happened to their lives."
+      : F.walk ? "While you stood at Bornholmer Straße, your colleagues shredded half the night. Your files were still there when the citizens came in, in January 1990."
         : "";
-  const own = `In 1992 vraag je je eigen dossier op. ${60 + S.dossier * 3} pagina's. Informant: IM „Lerche“: Erich Pohl, je buurman. Elke week: wanneer je thuiskwam, wie er op bezoek kwam, of je dronk.${F.pohl ? " Je had het al vermoed. Het maakt het niet minder koud." : ""} Ook de Stasi vertrouwde de Stasi niet.`;
-  const fam = F.alone ? "Katrin is nooit teruggekomen uit Rostock. Jens belt met Kerstmis." : S.gezin >= 60 ? "Katrin en Jens zijn er nog. Jens vraagt in 1996, als hij twintig is, wat je eigenlijk deed. Deze keer vertel je het." : S.gezin >= 30 ? "Katrin blijft. Over de jaren tachtig wordt thuis niet gepraat." : "Katrin vraagt in 1991 de scheiding aan. ‘Ik heb mijn eigen dossier gelezen,’ zegt ze. ‘Jij stond er niet in. Maar je had het kunnen voorkomen.’";
+  const own = `In 1992 you request your own file. ${60 + S.dossier * 3} pages. Informer: IM „Lerche“: Erich Pohl, your neighbour. Every week: when you came home, who visited, whether you drank.${F.pohl ? " You had suspected it. That doesn't make it any less cold." : ""} Even the Stasi did not trust the Stasi.`;
+  const fam = F.alone ? "Katrin never came back from Rostock. Jens phones at Christmas." : S.gezin >= 60 ? "Katrin and Jens are still there. In 1996, when he is twenty, Jens asks what you actually did. This time you tell him." : S.gezin >= 30 ? "Katrin stays. At home, nobody talks about the eighties." : "Katrin files for divorce in 1991. ‘I read my own file,’ she says. ‘You weren't in it. But you could have stopped it.’";
   // lotgevallen
   const lines = [];
   const seen = new Set();
   Object.entries(S.fates).forEach(([pid, txt]) => { const p = P(pid); if (p) { lines.push([p.name, txt]); seen.add(pid); } });
-  S.wrongs.forEach(w => { const p = P(w.innocent); if (p && !seen.has(p.id)) { lines.push([p.name, `Werd in ${w.month} aangewezen voor iets wat ${P(w.culprit).name} had gedaan. ${p.status === "gevangen" ? "Zat maanden vast voor niets." : "Begreep jarenlang niet waarom alles misging."}`]); seen.add(p.id); } });
+  S.wrongs.forEach(w => { const p = P(w.innocent); if (p && !seen.has(p.id)) { lines.push([p.name, `Was named in ${w.month} for something ${P(w.culprit).name} had done. ${p.status === "gevangen" ? "Spent months in prison for nothing." : "For years did not understand why everything went wrong."}`]); seen.add(p.id); } });
   S.people.filter(p => !seen.has(p.id) && !p.secretIM && (p.pages >= 12 || p.status !== "vrij")).sort((a, b) => b.pages - a.pages).slice(0, 12).forEach(p => {
-    const txt = { gevangen: `Zat in Hohenschönhausen en daarna in Bautzen. Werd in 1990 gerehabiliteerd. Dossier: ${p.pages} pagina's.`, zersetzt: `Verloor vrienden, werk en zelfvertrouwen zonder te weten waarom. Begreep het pas in 1992, bij pagina ${Math.max(3, p.pages - 10)} van ${p.pages}.`, im: `Was IM „${p.code}“. Werd na 1992 ontmaskerd door buren die hun eigen dossiers lazen.`, gevlucht: "Vluchtte in 1989 via Hongarije en kwam pas in 1991 terug om de woning op te halen.", uitgereisd: "Mocht uitreizen. Kwam pas na 1990 terug op bezoek.", vrij: `Las in 1992 een dossier van ${p.pages} pagina's over zichzelf.` }[p.status] || "";
+    const txt = { gevangen: `Was held in Hohenschönhausen, then in Bautzen. Rehabilitated in 1990. File: ${p.pages} pages.`, zersetzt: `Lost friends, work and self-confidence without knowing why. Only understood in 1992, on page ${Math.max(3, p.pages - 10)} of ${p.pages}.`, im: `Was IM „${p.code}“. Exposed after 1992 by neighbours reading their own files.`, gevlucht: "Fled via Hungary in 1989 and only came back in 1991 to clear the flat.", uitgereisd: "Was allowed to leave. Only came back to visit after 1990.", vrij: `In 1992 read a file of ${p.pages} pages about themselves.` }[p.status] || "";
     lines.push([p.name, txt]);
   });
   const found = endings();
   const st = S.stats;
   modal(`<div class="stamp">${id === "gearresteerd" ? "VERHAFTET" : "AKTE GEÖFFNET"}</div>
-    <div class="kicker">${cause === "gearresteerd" || cause === "overgeplaatst" ? esc(turn().label) : "Epiloog · Stasi-Unterlagen-Gesetz, 1992"}</div>
+    <div class="kicker">${cause === "gearresteerd" || cause === "overgeplaatst" ? esc(turn().label) : "Epilogue · Stasi Records Act, 1992"}</div>
     <h1>${esc(T[0])}</h1>
     <div class="result">${esc(T[1])}${files ? "\n\n" + esc(files) : ""}\n\n${esc(own)}\n\n${esc(fam)}</div>
-    <div class="kicker" style="margin-top:8px">Wat er van hen werd</div>
+    <div class="kicker" style="margin-top:8px">What became of them</div>
     ${lines.map(([n, t]) => `<div class="ep-item"><b>${esc(n)}</b><p>${esc(t)}</p></div>`).join("")}
-    <div class="ep-item"><b>Jouw staat van dienst</b><p>Rang ${esc(rank().id)} · geweten ${S.geweten} · ${st.recruits} IM's geworven · ${st.arrests} arrestaties · ${st.zersetzung}× Zersetzung · ${st.solved + st.wrong} zaken ‘opgelost’, waarvan ${st.wrong} met de verkeerde dader</p></div>
-    <div class="ep-item"><b>Eindes ontdekt: ${found.length} van ${Object.keys(ENDINGS).length}</b><p>${Object.entries(ENDINGS).map(([k, v]) => found.includes(k) ? `✓ ${esc(v)}` : "? ???").join(" · ")}</p></div>
-    <p class="note"><i>De Stasi had in 1989 zo'n 91.000 vaste medewerkers en bijna 190.000 informanten. Sinds 1992 hebben meer dan drie miljoen mensen gevraagd hun dossier in te zien.</i></p>
-    <button class="next" id="nx">Opnieuw spelen</button>`,
+    <div class="ep-item"><b>Your service record</b><p>Rank ${esc(rank().id)} · conscience ${S.geweten} · ${st.recruits} IMs recruited · ${st.arrests} arrests · ${st.zersetzung}× Zersetzung · ${st.solved + st.wrong} cases ‘solved’, ${st.wrong} of them with the wrong culprit</p></div>
+    <div class="ep-item"><b>Endings found: ${found.length} of ${Object.keys(ENDINGS).length}</b><p>${Object.entries(ENDINGS).map(([k, v]) => found.includes(k) ? `✓ ${esc(v)}` : "? ???").join(" · ")}</p></div>
+    <p class="note"><i>In 1989 the Stasi had some 91,000 full-time staff and almost 190,000 informers. Since 1992 more than three million people have asked to see their files.</i></p>
+    <button class="next" id="nx">Play again</button>`,
     m => m.querySelector("#nx").onclick = () => { closeModal(); showTitle(); }, { lock: true, wide: true });
 }
 
@@ -452,20 +454,20 @@ function bar(lbl, v, cls) { const seg = Math.round(v / 10); return `<div class="
 function refresh() {
   if (!S) return;
   const T = turn();
-  $("#hud").innerHTML = `<div class="hrow"><span class="date">${esc(T.label)}</span><span class="rk">${esc(rank().id)}</span><button class="help" id="helpBtn" aria-label="Uitleg">?</button></div>
-   <div class="stats">${bar("Gunst", S.gunst, "sg")}${bar("Geweten", S.geweten, "sc")}${bar("Verdenking", S.dossier, "sd")}</div>
-   <div class="mk"><span class="mkl">MK</span>${"<i class=on></i>".repeat(S.mk)}${"<i></i>".repeat(Math.max(0, rank().mk - S.mk))}<span class="goal">Plan ${T.y}: <b>${S.res}/${S.quota.res}</b> erg. · <b>${imCount()}/${S.quota.ims}</b> IM</span></div>`;
+  $("#hud").innerHTML = `<div class="hrow"><span class="date">${esc(T.label)}</span><span class="rk">${esc(rank().id)}</span><button class="help" id="helpBtn" aria-label="Help">?</button></div>
+   <div class="stats">${bar("Favour", S.gunst, "sg")}${bar("Conscience", S.geweten, "sc")}${bar("Suspicion", S.dossier, "sd")}</div>
+   <div class="mk"><span class="mkl">MP</span>${"<i class=on></i>".repeat(S.mk)}${"<i></i>".repeat(Math.max(0, rank().mk - S.mk))}<span class="goal">Plan ${T.y}: <b>${S.res}/${S.quota.res}</b> res. · <b>${imCount()}/${S.quota.ims}</b> IM</span></div>`;
   $("#helpBtn").onclick = showHelp;
   $("#hud .stats").onclick = explainMeters; $("#hud .mk").onclick = explainMeters;
   const unread = S.inbox.filter(i => !i.read).length;
   const pend = via => S.queue.filter(q => ev(q).via === via).length;
   const phone = pend("telefoon");
   world.setRinging(phone > 0);
-  world.setOffice({ folders: unread + pend("dossier"), caseOpen: !!S.case, date: T.label.split(" ").slice(0, -1).join(" ").replace(/^\d+ /, m => m), month: String(T.y), badges: { telefoon: phone ? "!" : "", dossiers: (unread + pend("dossier")) || "", gezin: pend("gezin") ? "!" : "", onderzoek: S.case ? `${S.case.turns} mnd` : "", typemachine: "" } });
+  world.setOffice({ folders: unread + pend("dossier"), caseOpen: !!S.case, date: T.label.split(" ").slice(0, -1).join(" ").replace(/^\d+ /, m => m), month: String(T.y), badges: { telefoon: phone ? "!" : "", dossiers: (unread + pend("dossier")) || "", gezin: pend("gezin") ? "!" : "", onderzoek: S.case ? `${S.case.turns} t.` : "", typemachine: "" } });
   const ims = {}; S.people.filter(p => p.status === "im").forEach(p => ims[p.home] = (ims[p.home] || 0) + 1);
   const info = {}; BUILDINGS.forEach(b => { let t = ""; if (S.bugs[b.id]) t += " "; if (ims[b.id]) t += ` <b style="background:#2f5a8a">IM ${ims[b.id]}</b>`; if (S.case && S.case.shown.includes("place") && S.case.home === b.id) t += " <b>!</b>"; info[b.id] = t; });
   world.setDistrict({ info, bugs: S.bugs, ims, winter: !!T.winter, finale: T.key === "1989-nov" });
-  $("#navEnd").innerHTML = `Afsluiten<small>naar ${esc((TURNS[S.t + 1] || T).label)}</small>`;
+  $("#navEnd").innerHTML = `End turn<small>to ${esc((TURNS[S.t + 1] || T).label)}</small>`;
   updateCoach();
 }
 
@@ -494,30 +496,30 @@ function toast(html) { const t = $("#toast"); t.innerHTML = html; t.classList.ad
 
 // ---------- schermen ----------
 function personRow(p, extra = "") {
-  const st = { im: `<span class="tag blue">IM „${esc(p.code)}“</span>`, gevangen: '<span class="tag grey">gevangen</span>', zersetzt: '<span class="tag red">zersetzt</span>', gevlucht: '<span class="tag grey">gevlucht</span>', uitgereisd: '<span class="tag grey">uitgereisd</span>' }[p.status] || "";
+  const st = { im: `<span class="tag blue">IM „${esc(p.code)}“</span>`, gevangen: '<span class="tag grey">imprisoned</span>', zersetzt: '<span class="tag red">zersetzt</span>', gevlucht: '<span class="tag grey">fled</span>', uitgereisd: '<span class="tag grey">emigrated</span>' }[p.status] || "";
   const nk = Object.keys(p.known).length;
-  return `<button class="row" data-pid="${p.id}"><span class="rn"><b>${esc(p.name)}</b> ${st}${S.taps[p.id] ? ' <span class="tag red">getapt</span>' : ""}<small>${esc(p.job)} · ${p.age} jaar</small></span><span class="rp">${extra}<span>${p.pages}<small> pag.</small></span>${nk ? `<small>${nk} kenmerk${nk > 1 ? "en" : ""}</small>` : ""}</span></button>`;
+  return `<button class="row" data-pid="${p.id}"><span class="rn"><b>${esc(p.name)}</b> ${st}${S.taps[p.id] ? ' <span class="tag red">tapped</span>' : ""}<small>${esc(p.job)} · ${p.age}</small></span><span class="rp">${extra}<span>${p.pages}<small> pp.</small></span>${nk ? `<small>${nk} trait${nk > 1 ? "s" : ""}</small>` : ""}</span></button>`;
 }
 function bindRows(el) { el.querySelectorAll("[data-pid]").forEach(b => b.onclick = () => sheet(e => personView(e, P(b.dataset.pid)))); }
 
 function hostility(p) {
-  const ks = Object.keys(p.known).filter(t => TRAITS[t]); if (!ks.length) return "onbekend";
+  const ks = Object.keys(p.known).filter(t => TRAITS[t]); if (!ks.length) return "unknown";
   const s = ks.reduce((a, t) => a + (TRAITS[t].dis || 0), 0);
-  return s >= 35 ? "hoog" : s >= 15 ? "gemiddeld" : s > 0 ? "laag" : "geen aanwijzingen";
+  return s >= 35 ? "high" : s >= 15 ? "medium" : s > 0 ? "low" : "no signs";
 }
 function personView(el, p) {
   tutDone(3);
   const b = Bd(p.home); const work = p.work ? WORKPLACES[p.work].name : "—";
-  const known = Object.entries(p.known).map(([t, k]) => `<li>${esc(trLabel(t))} <span class="tag ${k.s === "zeker" ? "green" : "amber"}">${k.s === "zeker" ? "bevestigd" : `IM „${esc((P(k.im) || {}).code || "?")}“, onbevestigd`}</span></li>`).join("") || "<li class='muted'>Nog niets. Observeer, luister af of zet een informant in.</li>";
+  const known = Object.entries(p.known).map(([t, k]) => `<li>${esc(trLabel(t))} <span class="tag ${k.s === "zeker" ? "green" : "amber"}">${k.s === "zeker" ? "confirmed" : `IM „${esc((P(k.im) || {}).code || "?")}“, unconfirmed`}</span></li>`).join("") || "<li class='muted'>Nothing yet. Observe, bug, or put an informer on them.</li>";
   const r = rank(); const info = [], hard = [];
   const can = free(p) || p.status === "im";
-  const btn = (arr, k, l, cost, dis, why) => arr.push(`<button class="act" data-a="${k}" ${dis ? "disabled" : ""}><b>${l} <em>${cost ? cost + " MK" : "gratis"}</em></b><span>${why}</span></button>`);
+  const btn = (arr, k, l, cost, dis, why) => arr.push(`<button class="act" data-a="${k}" ${dis ? "disabled" : ""}><b>${l} <em>${cost ? cost + " MP" : "free"}</em></b><span>${why}</span></button>`);
   if (can) {
-    btn(info, "observe", "Observeren", 1, S.mk < 1, "Ontdek wat iemand verbergt. Controleert ook wat informanten beweren.");
+    btn(info, "observe", "Observe", 1, S.mk < 1, "Find out what someone is hiding. Also checks what informers claim.");
   }
   if (free(p) && p.status === "vrij") {
-    btn(hard, "warn", "Waarschuwen", 1, S.mk < 1, "Bang maken. Wordt minder opstandig. Licht.");
-    btn(hard, "arrest", "Arresteren", 2, S.mk < 2 || !evidence(p), evidence(p) ? "Telt als resultaat. Zwaarste ingreep." : `Kan pas met 2 bevestigde verdachte kenmerken (nu ${susCount(p)}).`);
+    btn(hard, "warn", "Warn", 1, S.mk < 1, "Frighten them. They become less defiant. Light touch.");
+    btn(hard, "arrest", "Arrest", 2, S.mk < 2 || !evidence(p), evidence(p) ? "Counts as a result. The heaviest measure." : `Needs 2 confirmed suspicious traits (now ${susCount(p)}).`);
   }
   const levs = Object.keys(p.known).filter(t => TRAITS[t] && TRAITS[t].lev);
   const recruitable = p.status === "vrij" && !p.family && !p.secretIM;
@@ -525,30 +527,30 @@ function personView(el, p) {
   if (S.case && free(p)) {
     const c = S.case; const tw = twOf(p); const twKnown = tw && p.known[tw] && p.known[tw].s === "zeker";
     const m = k => k === "tw" ? (twKnown ? (tw === c.tw ? "✓" : "✗") : "?") : k === "paper" ? (p.work === c.work ? "✓" : "✗") : (p.home === c.home ? "✓" : "✗");
-    caseBox = `<div class="box red"><div class="kicker">Lopend onderzoek: ${esc(INCIDENTS[c.tmpl].t)}</div>${c.shown.map(k => `<div class="clue">${m(k)} ${esc(clueText(c, k))}</div>`).join("")}${c.geur[p.id] !== undefined ? `<div class="clue">${c.geur[p.id] ? "✓ Geurmonster: de hond sloeg aan" : "✗ Geurmonster: geen reactie"}</div>` : ""}
-     <div class="acts"><button class="act danger" data-a="accuse"><b>Aanwijzen als dader</b><span>sluit het onderzoek</span></button></div></div>`;
+    caseBox = `<div class="box red"><div class="kicker">Open case: ${esc(INCIDENTS[c.tmpl].t)}</div>${c.shown.map(k => `<div class="clue">${m(k)} ${esc(clueText(c, k))}</div>`).join("")}${c.geur[p.id] !== undefined ? `<div class="clue">${c.geur[p.id] ? "✓ Scent sample: the dog reacted" : "✗ Scent sample: no reaction"}</div>` : ""}
+     <div class="acts"><button class="act danger" data-a="accuse"><b>Name as culprit</b><span>closes the case</span></button></div></div>`;
   }
   let imBox = "";
   if (p.status === "im") {
-    const rel = p.known.dubbel ? "Dubbelspel ontdekt" : p.lies ? `Laag: ${p.lies} leugen${p.lies > 1 ? "s" : ""} ontdekt` : "Onbekend (controleer rapporten door te observeren)";
+    const rel = p.known.dubbel ? "Double agent exposed" : p.lies ? `Low: ${p.lies} lie${p.lies > 1 ? "s" : ""} caught` : "Unknown (check reports by observing)";
     const targets = S.people.filter(q => q !== p && free(q) && (q.home === p.home || (q.work && q.work === p.work)));
-    imBox = `<div class="box blue"><div class="kicker">Informant „${esc(p.code)}“</div><div class="clue">Betrouwbaarheid: ${esc(rel)}</div>${p.assign ? `<div class="clue">Opdracht: ${esc(P(p.assign).name)}</div>` : ""}
-      <label class="sel">Opdracht geven (1 MK): <select id="assignSel"><option value="">— kies een buur of collega —</option>${targets.map(q => `<option value="${q.id}">${esc(q.name)}</option>`).join("")}</select></label>
-      <div class="acts"><button class="act" data-a="drop"><b>Afstoten</b><span>0 MK</span></button></div></div>`;
+    imBox = `<div class="box blue"><div class="kicker">Informer „${esc(p.code)}“</div><div class="clue">Reliability: ${esc(rel)}</div>${p.assign ? `<div class="clue">Assignment: ${esc(P(p.assign).name)}</div>` : ""}
+      <label class="sel">Give an assignment (1 MP): <select id="assignSel"><option value="">— choose a neighbour or colleague —</option>${targets.map(q => `<option value="${q.id}">${esc(q.name)}</option>`).join("")}</select></label>
+      <div class="acts"><button class="act" data-a="drop"><b>Drop</b><span>0 MP</span></button></div></div>`;
   }
-  el.innerHTML = `<div class="ph"><div><div class="kicker">Akte ${4000 + S.people.indexOf(p) * 37}/85 · ${p.pages} pagina's</div><h2>${esc(p.name)}</h2><div class="who">${esc(p.job)}, ${p.age} jaar</div></div><div class="stampS">${p.status === "vrij" ? "" : esc(p.status.toUpperCase())}</div></div>
-   <div class="grid2"><div><small>Woont</small><a data-b="${b.id}">${esc(b.name)}</a></div><div><small>Werkt</small>${p.work && Bd(p.work) ? `<a data-b="${p.work}">${esc(work)}</a>` : esc(work)}</div><div><small>Hoe opstandig?</small>${hostility(p)}</div><div><small>Status</small>${esc(p.status)}</div></div>
-   ${p.secretIM ? `<div class="box"><div class="clue">Kaart ‘gesperrt’: inzage alleen voor de Hauptabteilung. Deze persoon is niet beschikbaar voor maatregelen.</div></div>` : ""}
+  el.innerHTML = `<div class="ph"><div><div class="kicker">Akte ${4000 + S.people.indexOf(p) * 37}/85 · ${p.pages} pages</div><h2>${esc(p.name)}</h2><div class="who">${esc(p.job)}, ${p.age}</div></div><div class="stampS">${p.status === "vrij" ? "" : esc((STATUS_L[p.status] || p.status).toUpperCase())}</div></div>
+   <div class="grid2"><div><small>Lives at</small><a data-b="${b.id}">${esc(b.name)}</a></div><div><small>Works at</small>${p.work && Bd(p.work) ? `<a data-b="${p.work}">${esc(work)}</a>` : esc(work)}</div><div><small>How defiant?</small>${hostility(p)}</div><div><small>Status</small>${esc(STATUS_L[p.status] || p.status)}</div></div>
+   ${p.secretIM ? `<div class="box"><div class="clue">Card ‘gesperrt’: access for the Hauptabteilung only. This person is not available for measures.</div></div>` : ""}
    <div class="advice">${personAdvice(p)}</div>
    ${caseBox}${imBox}
-   <div class="kicker">Wat je weet</div><ul class="traits">${known}</ul>
-   ${p.secretIM ? "" : `${info.length ? `<div class="kicker">Informatie verzamelen</div><div class="acts">${info.join("")}</div>` : ""}${hard.length ? `<div class="kicker">Ingrijpen</div><div class="acts">${hard.join("")}</div>` : ""}`}
-   ${recruitable ? (() => { const how = bestLever(p); const pct = Math.round(recruitChance(p, how) * 100); return `<div class="kicker">Informant maken <small class="muted">· ${imCount()}/${r.ims}</small></div><div class="acts one"><button class="act" data-a="recruit" data-h="${how}" ${S.mk < 1 || imCount() >= r.ims ? "disabled" : ""}><b>Werven als IM <em>1 MK · ${pct}% kans</em></b><span>${how !== "gunst" ? `Chanteren met: ${esc(trLabel(how).toLowerCase())}.` : "Zonder chantagemateriaal is de kans klein. Observeer eerst."} Een IM verklikt elke beurt vanzelf een buur.</span></button></div>`; })() : ""}
-   ${p.log.length ? `<div class="kicker">Aantekeningen</div><ul class="log">${p.log.slice(-8).reverse().map(l => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}`;
+   <div class="kicker">What you know</div><ul class="traits">${known}</ul>
+   ${p.secretIM ? "" : `${info.length ? `<div class="kicker">Gather information</div><div class="acts">${info.join("")}</div>` : ""}${hard.length ? `<div class="kicker">Intervene</div><div class="acts">${hard.join("")}</div>` : ""}`}
+   ${recruitable ? (() => { const how = bestLever(p); const pct = Math.round(recruitChance(p, how) * 100); return `<div class="kicker">Make an informer <small class="muted">· ${imCount()}/${r.ims}</small></div><div class="acts one"><button class="act" data-a="recruit" data-h="${how}" ${S.mk < 1 || imCount() >= r.ims ? "disabled" : ""}><b>Recruit as IM <em>1 MP · ${pct}% chance</em></b><span>${how !== "gunst" ? `Leverage: ${esc(trLabel(how).toLowerCase())}.` : "Without leverage the chance is small. Observe first."} An IM informs on a neighbour every turn.</span></button></div>`; })() : ""}
+   ${p.log.length ? `<div class="kicker">Notes</div><ul class="log">${p.log.slice(-8).reverse().map(l => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}`;
   el.querySelectorAll("[data-b]").forEach(a => a.onclick = () => openBuilding(a.dataset.b));
   el.querySelectorAll("button.act").forEach(bt => bt.onclick = () => {
     const a = bt.dataset.a;
-    if (a === "accuse") return modal(`<h1>${esc(p.name)} aanwijzen?</h1><div class="result">Je kunt dit niet terugdraaien. Als je je vergist, loopt de echte dader vrij rond.</div><div class="choices"><button class="ch" id="y"><b>Ja, ${pron(p)} is het</b></button><button class="ch" id="n"><b>Nog niet</b></button></div>`, m => { m.querySelector("#y").onclick = () => { closeModal(); closeSheet(); accuse(p); }; m.querySelector("#n").onclick = closeModal; });
+    if (a === "accuse") return modal(`<h1>Name ${esc(p.name)}?</h1><div class="result">You can't undo this. If you are wrong, the real culprit stays free.</div><div class="choices"><button class="ch" id="y"><b>Yes, it's ${obj(p)}</b></button><button class="ch" id="n"><b>Not yet</b></button></div>`, m => { m.querySelector("#y").onclick = () => { closeModal(); closeSheet(); accuse(p); }; m.querySelector("#n").onclick = closeModal; });
     if (a === "recruit") return ACT.recruit(p, bt.dataset.h);
     if (a === "drop") return ACT.drop(p);
     ACT[a](p);
@@ -559,13 +561,13 @@ function personView(el, p) {
 function openBuilding(id) { world.select(id); sheet(el => buildingView(el, id)); tutDone(2); }
 function buildingView(el, id) {
   const b = Bd(id);
-  if (id === "mfs") { el.innerHTML = `<h2>${esc(b.name)}</h2><p class="who">${esc(b.desc)}</p><button class="next" id="go">Naar je kantoor</button>`; el.querySelector("#go").onclick = () => { closeSheet(); setMode("office"); }; return; }
+  if (id === "mfs") { el.innerHTML = `<h2>${esc(b.name)}</h2><p class="who">${esc(b.desc)}</p><button class="next" id="go">To your office</button>`; el.querySelector("#go").onclick = () => { closeSheet(); setMode("office"); }; return; }
   const res = S.people.filter(p => p.home === id), wrk = S.people.filter(p => p.work === id);
   const r = rank();
-  el.innerHTML = `<div class="kicker">${b.res ? "Woongebouw" : "Werkplek"}</div><h2>${esc(b.name)}</h2><p class="who">${esc(b.desc)}</p>
-    <div class="acts"><button class="act ${S.bugs[id] ? "danger" : ""}" id="bugBtn" ${!S.bugs[id] && (S.mk < 2 || pool() >= r.bugs) ? "disabled" : ""}><b>${S.bugs[id] ? "Microfoons weghalen" : "Microfoons plaatsen"}</b><span>${S.bugs[id] ? "geeft apparatuur vrij" : `2 MK · elke beurt afgeluisterde gesprekken · ${pool()}/${r.bugs} in gebruik`}</span></button></div>
-    ${res.length ? `<div class="kicker">Bewoners</div>${res.map(p => personRow(p)).join("")}` : ""}
-    ${wrk.length ? `<div class="kicker">Werkt hier</div>${wrk.map(p => personRow(p)).join("")}` : ""}`;
+  el.innerHTML = `<div class="kicker">${b.res ? "Residential" : "Workplace"}</div><h2>${esc(b.name)}</h2><p class="who">${esc(b.desc)}</p>
+    <div class="acts"><button class="act ${S.bugs[id] ? "danger" : ""}" id="bugBtn" ${!S.bugs[id] && (S.mk < 2 || pool() >= r.bugs) ? "disabled" : ""}><b>${S.bugs[id] ? "Remove bugs" : "Plant bugs"}</b><span>${S.bugs[id] ? "frees the equipment" : `2 MP · bugged conversations every turn · ${pool()}/${r.bugs} in use`}</span></button></div>
+    ${res.length ? `<div class="kicker">Residents</div>${res.map(p => personRow(p)).join("")}` : ""}
+    ${wrk.length ? `<div class="kicker">Works here</div>${wrk.map(p => personRow(p)).join("")}` : ""}`;
   el.querySelector("#bugBtn").onclick = () => ACT.bug(id);
   bindRows(el);
 }
@@ -573,30 +575,30 @@ function buildingView(el, id) {
 // ---------- kartotheek: zoeken, filters met tellers, laden per adres ----------
 const GONE = ["gevangen", "gevlucht", "uitgereisd", "overgeplaatst"];
 const KF = [
-  ["", "Alle", () => true],
-  ["sus", "Verdacht", p => free(p) && (susCount(p) > 0 || ["gemiddeld", "hoog"].includes(hostility(p)))],
-  ["im", "IM's", p => p.status === "im"],
-  ["case", "Onderzoek", p => S.case && free(p) && matchesShown(p, S.case)],
-  ["unk", "Onbekend", p => free(p) && !Object.keys(p.known).length],
-  ["gone", "Weg", p => GONE.includes(p.status)],
+  ["", "All", () => true],
+  ["sus", "Suspect", p => free(p) && (susCount(p) > 0 || ["medium", "high"].includes(hostility(p)))],
+  ["im", "IMs", p => p.status === "im"],
+  ["case", "Case", p => S.case && free(p) && matchesShown(p, S.case)],
+  ["unk", "Unknown", p => free(p) && !Object.keys(p.known).length],
+  ["gone", "Gone", p => GONE.includes(p.status)],
 ];
-function susLevel(p) { const h = hostility(p); return h === "hoog" ? 3 : h === "gemiddeld" ? 2 : h === "laag" ? 1 : h === "onbekend" ? -1 : 0; }
+function susLevel(p) { const h = hostility(p); return h === "high" ? 3 : h === "medium" ? 2 : h === "low" ? 1 : h === "unknown" ? -1 : 0; }
 function cardRow(p, sub) {
-  const st = { im: `<span class="tag blue">IM „${esc(p.code)}“</span>`, gevangen: '<span class="tag grey">gevangen</span>', zersetzt: '<span class="tag red">zersetzt</span>', gevlucht: '<span class="tag grey">gevlucht</span>', uitgereisd: '<span class="tag grey">uitgereisd</span>', overgeplaatst: '<span class="tag grey">overgeplaatst</span>' }[p.status] || "";
+  const st = { im: `<span class="tag blue">IM „${esc(p.code)}“</span>`, gevangen: '<span class="tag grey">imprisoned</span>', zersetzt: '<span class="tag red">zersetzt</span>', gevlucht: '<span class="tag grey">fled</span>', uitgereisd: '<span class="tag grey">emigrated</span>', overgeplaatst: '<span class="tag grey">transferred</span>' }[p.status] || "";
   const lv = susLevel(p);
-  const leds = lv < 0 ? `<span class="sus3 unk" title="nog niets bekend">?</span>` : `<span class="sus3">${[1, 2, 3].map(i => `<i class="${i <= lv ? "on" : ""}"></i>`).join("")}</span>`;
-  return `<button class="row card${GONE.includes(p.status) ? " gone" : ""}" data-pid="${p.id}"><span class="rn"><b>${esc(p.name)}</b> ${st}${S.taps[p.id] ? ' <span class="tag red">getapt</span>' : ""}<small>${esc(sub)}</small></span><span class="rp">${leds}<span>${p.pages}<small> pag.</small></span></span></button>`;
+  const leds = lv < 0 ? `<span class="sus3 unk" title="nothing known yet">?</span>` : `<span class="sus3">${[1, 2, 3].map(i => `<i class="${i <= lv ? "on" : ""}"></i>`).join("")}</span>`;
+  return `<button class="row card${GONE.includes(p.status) ? " gone" : ""}" data-pid="${p.id}"><span class="rn"><b>${esc(p.name)}</b> ${st}${S.taps[p.id] ? ' <span class="tag red">tapped</span>' : ""}<small>${esc(sub)}</small></span><span class="rp">${leds}<span>${p.pages}<small> pp.</small></span></span></button>`;
 }
 function cartotheek(el) {
   const f = cartotheek.f || (cartotheek.f = { q: "", c: "", v: "adres", open: {} });
   if (f.c === "case" && !S.case) f.c = "";
   const chipsHTML = () => KF.filter(([k]) => k !== "case" || S.case).map(([k, l, fn]) => { const n = S.people.filter(fn).length; return `<button class="kchip${f.c === k ? " on" : ""}${k === "case" ? " red" : ""}" data-c="${k}" ${!n && k ? "disabled" : ""}>${l}<b>${n}</b></button>`; }).join("");
-  el.innerHTML = `<div class="kicker">Kartotheek F16 · ${S.people.length} kaarten</div><h2>Kartotheek</h2>
-   <input id="fq" class="ksearch" type="search" placeholder="Zoek naam, beroep of werkplek" value="${esc(f.q)}" autocomplete="off">
+  el.innerHTML = `<div class="kicker">Kartei F16 · ${S.people.length} cards</div><h2>Card index</h2>
+   <input id="fq" class="ksearch" type="search" placeholder="Search name, job or workplace" value="${esc(f.q)}" autocomplete="off">
    <div class="kchips" id="kc"></div>
-   <div class="kview"><button data-v="adres" class="${f.v === "adres" ? "on" : ""}">Per adres</button><button data-v="dik" class="${f.v === "dik" ? "on" : ""}">Dikste dossiers</button></div>
+   <div class="kview"><button data-v="adres" class="${f.v === "adres" ? "on" : ""}">By address</button><button data-v="dik" class="${f.v === "dik" ? "on" : ""}">Thickest files</button></div>
    <div id="rows"></div>
-   <p class="muted small klegend"><span class="sus3"><i class="on"></i><i class="on"></i><i></i></span> = wat je weet over hun houding · <b>?</b> = nog niets bekend</p>`;
+   <p class="muted small klegend"><span class="sus3"><i class="on"></i><i class="on"></i><i></i></span> = what you know about their attitude · <b>?</b> = nothing known yet</p>`;
   const rows = el.querySelector("#rows"), kc = el.querySelector("#kc");
   const wp = p => p.work ? (WORKPLACES[p.work] || {}).name || "" : "";
   const draw = () => {
@@ -605,7 +607,7 @@ function cartotheek(el) {
     el.querySelectorAll("[data-v]").forEach(b => b.classList.toggle("on", b.dataset.v === f.v));
     const fn = (KF.find(x => x[0] === f.c) || KF[0])[2], q = f.q.trim().toLowerCase();
     const list = S.people.filter(fn).filter(p => !q || [p.name, p.job, wp(p), Bd(p.home).name].some(x => x.toLowerCase().includes(q)));
-    if (!list.length) { rows.innerHTML = "<p class='muted'>Geen kaarten gevonden.</p>"; return; }
+    if (!list.length) { rows.innerHTML = "<p class='muted'>No cards found.</p>"; return; }
     const byPages = (a, b) => b.pages - a.pages || a.name.localeCompare(b.name);
     if (f.v === "dik") {
       rows.innerHTML = list.sort(byPages).map(p => cardRow(p, `${p.job} · ${Bd(p.home).name}`)).join("");
@@ -613,7 +615,7 @@ function cartotheek(el) {
       const homes = BUILDINGS.filter(b => b.res && list.some(p => p.home === b.id));
       const auto = !!(q || f.c);   // bij zoeken of filter: alle laden open
       rows.innerHTML = homes.map(b => { const ps = list.filter(p => p.home === b.id).sort(byPages); const ims = ps.filter(p => p.status === "im").length, sus = ps.filter(KF[1][2]).length;
-        return `<details class="lade" data-b="${b.id}"${auto || f.open[b.id] ? " open" : ""}><summary><span class="lt">${esc(b.name)}</span><span class="lc">${ims ? `<em class="blue">${ims} IM</em>` : ""}${sus ? `<em class="red">${sus} verd.</em>` : ""}<b>${ps.length}</b></span></summary>${ps.map(p => cardRow(p, `${p.job}${wp(p) ? " · " + wp(p) : ""} · ${p.age} jaar`)).join("")}</details>`; }).join("");
+        return `<details class="lade" data-b="${b.id}"${auto || f.open[b.id] ? " open" : ""}><summary><span class="lt">${esc(b.name)}</span><span class="lc">${ims ? `<em class="blue">${ims} IM</em>` : ""}${sus ? `<em class="red">${sus} susp.</em>` : ""}<b>${ps.length}</b></span></summary>${ps.map(p => cardRow(p, `${p.job}${wp(p) ? " · " + wp(p) : ""} · ${p.age}`)).join("")}</details>`; }).join("");
       rows.querySelectorAll("details.lade").forEach(d => d.ontoggle = () => { if (!auto) f.open[d.dataset.b] = d.open; });
     }
     bindRows(rows);
@@ -623,7 +625,7 @@ function cartotheek(el) {
   draw();
 }
 
-const KLAB = { im: "IM-rapport", bug: "Microfoon", warn: "Waarschuwing", info: "Info", case: "Onderzoek" };
+const KLAB = { im: "IM report", bug: "Bug", warn: "Warning", info: "Info", case: "Case" };
 function firstLine(t) {
   const s = String(t || "").trim(), l = s.split("\n")[0];
   const m = l.match(/^.{24,}?[.!?’)](?=\s|$)/); let f = (m ? m[0] : l).trim();
@@ -635,21 +637,21 @@ function msgHTML(i) {
   return `<div class="msg k-${i.k}${i.read ? "" : " unread"}${more ? " fold" : ""}" data-i="${i.id}">
     <div class="mh"><span class="mlab">${KLAB[i.k] || "Info"}</span><b>${esc(i.title)}</b>${more ? `<span class="mx">+</span>` : ""}</div>
     <div class="mt short">${esc(f)}</div>${more ? `<div class="mt full">${esc(i.text)}</div>` : ""}
-    ${i.pid && P(i.pid) ? `<button class="lnk" data-pid="${i.pid}">Open dossier ${esc(P(i.pid).name)} →</button>` : ""}</div>`;
+    ${i.pid && P(i.pid) ? `<button class="lnk" data-pid="${i.pid}">Open file ${esc(P(i.pid).name)} →</button>` : ""}</div>`;
 }
 function inboxView(el) {
   const pend = S.queue.filter(q => ev(q).via === "dossier");
   const nw = S.inbox.filter(i => !i.read), old = S.inbox.filter(i => i.read);
   const turnsOld = [...new Set(old.map(i => i.t))].sort((a, b) => b - a);
   const todo = pend.length + (S.case ? 1 : 0);
-  el.innerHTML = `<div class="kicker">Postvak in</div><h2>Dossiers</h2>
-   ${todo ? `<div class="ibh red">Wacht op jou · ${todo}</div>` : ""}
-   ${pend.map((q, i) => `<button class="row hot" data-q="${i}"><span class="rn"><b>Opdracht: ${esc(ev(q).title)}</b><small>Wacht op jouw beslissing</small></span><span class="rp">!</span></button>`).join("")}
-   ${S.case ? `<button class="row red" id="caseRow"><span class="rn"><b>Onderzoek: ${esc(INCIDENTS[S.case.tmpl].t)}</b><small>Nog ${S.case.turns} beurt(en) om de dader te vinden</small></span><span class="rp">→</span></button>` : ""}
-   ${nw.length ? `<div class="ibh">Nieuw · ${nw.length}</div>${nw.map(msgHTML).join("")}` : ""}
+  el.innerHTML = `<div class="kicker">In-tray</div><h2>Files</h2>
+   ${todo ? `<div class="ibh red">Waiting for you · ${todo}</div>` : ""}
+   ${pend.map((q, i) => `<button class="row hot" data-q="${i}"><span class="rn"><b>Order: ${esc(ev(q).title)}</b><small>Awaiting your decision</small></span><span class="rp">!</span></button>`).join("")}
+   ${S.case ? `<button class="row red" id="caseRow"><span class="rn"><b>Case: ${esc(INCIDENTS[S.case.tmpl].t)}</b><small>${S.case.turns} turn(s) left to find the culprit</small></span><span class="rp">→</span></button>` : ""}
+   ${nw.length ? `<div class="ibh">New · ${nw.length}</div>${nw.map(msgHTML).join("")}` : ""}
    ${turnsOld.map(t => { const its = old.filter(i => i.t === t); const cur = t === S.t;
-     return `<details class="ibt"${cur ? " open" : ""}><summary><span>${esc(TURNS[t].label)}</span><small>${its.length} bericht${its.length > 1 ? "en" : ""}</small></summary>${its.map(msgHTML).join("")}</details>`; }).join("")}
-   ${!S.inbox.length && !todo ? "<p class='muted'>Geen nieuwe dossiers. Zet IM's of microfoons in om informatie binnen te krijgen.</p>" : ""}`;
+     return `<details class="ibt"${cur ? " open" : ""}><summary><span>${esc(TURNS[t].label)}</span><small>${its.length} message${its.length > 1 ? "s" : ""}</small></summary>${its.map(msgHTML).join("")}</details>`; }).join("")}
+   ${!S.inbox.length && !todo ? "<p class='muted'>No new files. Use IMs or bugs to bring in information.</p>" : ""}`;
   S.inbox.forEach(i => i.read = true);
   el.querySelectorAll("[data-q]").forEach(b => b.onclick = () => { b.disabled = true; openEvent(pend[+b.dataset.q]); });
   el.querySelectorAll(".msg.fold").forEach(m => m.onclick = e => { if (e.target.closest(".lnk")) return; m.classList.toggle("open"); });
@@ -658,91 +660,91 @@ function inboxView(el) {
 }
 
 function caseView(el) {
-  const c = S.case; if (!c) { el.innerHTML = "<h2>Geen lopend onderzoek</h2>"; return; }
+  const c = S.case; if (!c) { el.innerHTML = "<h2>No open case</h2>"; return; }
   const sus = S.people.filter(p => free(p) && matchesShown(p, c));
-  const mark = (p, k) => { if (k === "tw") { const tw = twOf(p); const tk = tw && p.known[tw] && p.known[tw].s === "zeker"; const noneKnown = !tw && p.twChecked; return tk ? (tw === c.tw ? ["ok", "✓ zelfde machine"] : ["no", "✗ andere machine"]) : noneKnown ? ["no", "✗ geen machine gevonden"] : ["", "? machine onbekend"]; } if (k === "paper") return p.work === c.work ? ["ok", "✓ werkplek klopt"] : ["no", "✗ werkplek"]; return p.home === c.home ? ["ok", "✓ woont daar"] : ["no", "✗ woont elders"]; };
-  const steps = c.shown.includes("tw") ? `<ol class="howto"><li>De lijst hieronder toont alleen mensen bij wie ${c.shown.includes("paper") ? "de <b>werkplek</b>" : "het <b>adres</b>"} klopt.</li><li>Nu moet je weten <b>wie de juiste typemachine heeft</b>. Tik op <b>Observeer</b> bij een verdachte (1 mankracht). Microfoons in het gebouw helpen ook.</li><li>Zie je <b>✓ zelfde machine</b>? Tik op <b>Dader!</b></li></ol>` : `<ol class="howto"><li>Werkplek en adres samen wijzen meestal naar één persoon. Die staat hieronder.</li><li>Tik op <b>Dader!</b> om het onderzoek af te sluiten.</li></ol>`;
-  el.innerHTML = `<div class="stampS">ERMITTLUNG</div><div class="kicker">Onderzoek nr. ${c.n} · nog ${c.turns} beurt${c.turns > 1 ? "en" : ""}</div><h2>${esc(INCIDENTS[c.tmpl].t)}</h2>
+  const mark = (p, k) => { if (k === "tw") { const tw = twOf(p); const tk = tw && p.known[tw] && p.known[tw].s === "zeker"; const noneKnown = !tw && p.twChecked; return tk ? (tw === c.tw ? ["ok", "✓ same machine"] : ["no", "✗ different machine"]) : noneKnown ? ["no", "✗ no machine found"] : ["", "? machine unknown"]; } if (k === "paper") return p.work === c.work ? ["ok", "✓ workplace matches"] : ["no", "✗ workplace"]; return p.home === c.home ? ["ok", "✓ lives there"] : ["no", "✗ lives elsewhere"]; };
+  const steps = c.shown.includes("tw") ? `<ol class="howto"><li>The list below only shows people whose ${c.shown.includes("paper") ? "<b>workplace</b>" : "<b>address</b>"} matches.</li><li>Now you need to know <b>who has the right typewriter</b>. Tap <b>Observe</b> on a suspect (1 manpower). Bugs in the building help too.</li><li>See <b>✓ same machine</b>? Tap <b>Culprit!</b></li></ol>` : `<ol class="howto"><li>Workplace and address together usually point to one person. They are listed below.</li><li>Tap <b>Culprit!</b> to close the case.</li></ol>`;
+  el.innerHTML = `<div class="stampS">ERMITTLUNG</div><div class="kicker">Case no. ${c.n} · ${c.turns} turn${c.turns > 1 ? "s" : ""} left</div><h2>${esc(INCIDENTS[c.tmpl].t)}</h2>
    <div class="report">${esc(INCIDENTS[c.tmpl].d + (c.note || ""))}</div>
-   <div class="kicker">Aanwijzingen</div>${c.shown.map(k => `<div class="clue">• ${esc(clueText(c, k))}</div>`).join("")}
-   <div class="kicker">Hoe los je dit op?</div>${steps}
-   <div class="kicker">Verdachten (${sus.length})</div>
-   ${sus.map(p => `<div class="sus"><div class="sn"><a data-pid="${p.id}"><b>${esc(p.name)}</b></a><small>${esc(p.job)}</small><div class="marks">${c.shown.map(k => { const [cl, t] = mark(p, k); return `<span class="${cl}">${t}</span>`; }).join("")}${c.geur[p.id] !== undefined ? `<span class="${c.geur[p.id] ? "ok" : "no"}">${c.geur[p.id] ? "✓ hond slaat aan" : "✗ hond reageert niet"}</span>` : ""}</div></div>
-     <div class="sb">${c.shown.includes("tw") ? `<button class="mini" data-obs="${p.id}" ${S.mk < 1 ? "disabled" : ""}>Observeer<small>1 MK</small></button>` : ""}<button class="mini red" data-acc="${p.id}">Dader!</button></div></div>`).join("") || "<p class='muted'>Niemand past. Misschien werkt of woont de dader buiten wat je dacht.</p>"}
-   <p class="muted small">Kies je de verkeerde persoon, dan merkt Kessler het niet. Maar de echte dader slaat later opnieuw toe.</p>`;
+   <div class="kicker">Clues</div>${c.shown.map(k => `<div class="clue">• ${esc(clueText(c, k))}</div>`).join("")}
+   <div class="kicker">How do you solve it?</div>${steps}
+   <div class="kicker">Suspects (${sus.length})</div>
+   ${sus.map(p => `<div class="sus"><div class="sn"><a data-pid="${p.id}"><b>${esc(p.name)}</b></a><small>${esc(p.job)}</small><div class="marks">${c.shown.map(k => { const [cl, t] = mark(p, k); return `<span class="${cl}">${t}</span>`; }).join("")}${c.geur[p.id] !== undefined ? `<span class="${c.geur[p.id] ? "ok" : "no"}">${c.geur[p.id] ? "✓ dog reacts" : "✗ no reaction from dog"}</span>` : ""}</div></div>
+     <div class="sb">${c.shown.includes("tw") ? `<button class="mini" data-obs="${p.id}" ${S.mk < 1 ? "disabled" : ""}>Observe<small>1 MP</small></button>` : ""}<button class="mini red" data-acc="${p.id}">Culprit!</button></div></div>`).join("") || "<p class='muted'>Nobody fits. Perhaps the culprit works or lives somewhere you didn't expect.</p>"}
+   <p class="muted small">If you pick the wrong person, Kessler won't notice. But the real culprit will strike again.</p>`;
   el.querySelectorAll("[data-obs]").forEach(b => b.onclick = () => ACT.observe(P(b.dataset.obs)));
-  el.querySelectorAll("[data-acc]").forEach(b => b.onclick = () => { const p = P(b.dataset.acc); modal(`<h1>${esc(p.name)} aanwijzen?</h1><div class="result">Dit kun je niet terugdraaien. Als je je vergist, loopt de echte dader vrij rond.</div><div class="choices"><button class="ch" id="y"><b>Ja, ${pron(p)} is het</b></button><button class="ch" id="n"><b>Nog niet</b></button></div>`, m => { m.querySelector("#y").onclick = () => { closeModal(); closeSheet(); accuse(p); }; m.querySelector("#n").onclick = closeModal; }); });
+  el.querySelectorAll("[data-acc]").forEach(b => b.onclick = () => { const p = P(b.dataset.acc); modal(`<h1>Name ${esc(p.name)}?</h1><div class="result">You can't undo this. If you are wrong, the real culprit stays free.</div><div class="choices"><button class="ch" id="y"><b>Yes, it's ${obj(p)}</b></button><button class="ch" id="n"><b>Not yet</b></button></div>`, m => { m.querySelector("#y").onclick = () => { closeModal(); closeSheet(); accuse(p); }; m.querySelector("#n").onclick = closeModal; }); });
   el.querySelectorAll("a[data-pid]").forEach(a => a.onclick = () => sheet(e => personView(e, P(a.dataset.pid))));
 }
 
 function familyView(el) {
   const pend = S.queue.filter(q => ev(q).via === "gezin");
   const g = S.gezin;
-  const k = S.flags.alone ? "Katrin en Jens wonen in Rostock. De flat is stil." : g >= 70 ? "Katrin lacht weer om je flauwe grappen. Jens wil later ‘iets met computers’." : g >= 45 ? "Thuis is het rustig. Misschien te rustig." : g >= 25 ? "Katrin vraagt niet meer hoe laat je thuiskomt. Jens zit op zijn kamer." : "Katrin slaapt op de bank. Of jij. Het maakt niet meer uit wie.";
-  el.innerHTML = `<div class="kicker">Gezin</div><h2>Katrin & Jens</h2><div class="statline">${bar("Gezin", g, "sf")}</div><p class="who">${esc(k)}</p>
+  const k = S.flags.alone ? "Katrin and Jens live in Rostock. The flat is quiet." : g >= 70 ? "Katrin laughs at your bad jokes again. Jens wants to do ‘something with computers’ when he grows up." : g >= 45 ? "It's quiet at home. Maybe too quiet." : g >= 25 ? "Katrin no longer asks what time you'll be home. Jens stays in his room." : "Katrin sleeps on the sofa. Or you do. It no longer matters who.";
+  el.innerHTML = `<div class="kicker">Family</div><h2>Katrin & Jens</h2><div class="statline">${bar("Family", g, "sf")}</div><p class="who">${esc(k)}</p>
    ${pend.map((q, i) => `<button class="row hot" data-q="${i}"><span class="rn"><b>${esc(ev(q).title)}</b><small>${esc(ev(q).who || "")}</small></span><span class="rp">!</span></button>`).join("")}
-   <div class="acts"><button class="act" id="home" ${S.home || S.mk < 1 ? "disabled" : ""}><b>Vroeg naar huis</b><span>1 MK · gezin +7${S.home ? " · al gedaan" : ""}</span></button></div>
-   <p class="muted small">Een laag gezinsniveau heeft gevolgen. Ook voor hoe je verhaal afloopt.</p>`;
+   <div class="acts"><button class="act" id="home" ${S.home || S.mk < 1 ? "disabled" : ""}><b>Go home early</b><span>1 MP · family +7${S.home ? " · already done" : ""}</span></button></div>
+   <p class="muted small">A low family score has consequences. Including for how your story ends.</p>`;
   el.querySelectorAll("[data-q]").forEach(b => b.onclick = () => { b.disabled = true; openEvent(pend[+b.dataset.q]); });
   el.querySelector("#home").onclick = () => ACT.home();
 }
 
 function calendarView(el) {
   const q = S.quota, r = rank(), nr = RANKS[S.rank + 1];
-  el.innerHTML = `<div class="kicker">Jaardoelen ${turn().y}</div><h2>Kesslers verwachtingen</h2>
-   <div class="grid2"><div><small>Resultaten</small>${S.res} / ${q.res}</div><div><small>Actieve IM's</small>${imCount()} / ${q.ims}</div><div><small>Rang</small>${esc(r.id)}</div><div><small>Volgende rang</small>${nr ? `${esc(nr.id)}${nr.unlock ? " (" + esc(nr.unlock) + ")" : ""}` : "—"}</div></div>
-   <p class="who">Resultaten krijg je door onderzoeken op te lossen, vijanden van de staat te arresteren of te ‘zersetzen’, en via sommige beslissingen. Aan het eind van elk jaar volgt de jaarbeoordeling. Beide doelen gehaald: bevordering.</p>
-   <div class="kicker">Per rang</div><ul class="traits">${RANKS.map((x, i) => `<li class="${i === S.rank ? "" : "muted"}">${x.id}: ${x.mk} mankracht, ${x.ims} IM's, ${x.bugs} microfoonsets</li>`).join("")}</ul>
-   <div class="kicker">Rivaal</div><p class="who">${S.flags.fuchsMet ? `Oberleutnant Fuchs: ${S.fuchs >= 50 ? "openlijk vijandig" : S.fuchs >= 25 ? "op zijn hoede" : "beleefd"}.` : "Nog geen."}</p>`;
+  el.innerHTML = `<div class="kicker">Annual targets ${turn().y}</div><h2>Kessler's expectations</h2>
+   <div class="grid2"><div><small>Results</small>${S.res} / ${q.res}</div><div><small>Active IMs</small>${imCount()} / ${q.ims}</div><div><small>Rank</small>${esc(r.id)}</div><div><small>Next rank</small>${nr ? `${esc(nr.id)}${nr.unlock ? " (" + esc(nr.unlock) + ")" : ""}` : "—"}</div></div>
+   <p class="who">You earn results by solving cases, arresting enemies of the state or ‘zersetzing’ them, and through some decisions. At the end of every year comes the annual assessment. Meet both targets: promotion.</p>
+   <div class="kicker">By rank</div><ul class="traits">${RANKS.map((x, i) => `<li class="${i === S.rank ? "" : "muted"}">${x.id}: ${x.mk} manpower, ${x.ims} IMs, ${x.bugs} bugging sets</li>`).join("")}</ul>
+   <div class="kicker">Rival</div><p class="who">${S.flags.fuchsMet ? `Oberleutnant Fuchs: ${S.fuchs >= 50 ? "openly hostile" : S.fuchs >= 25 ? "on his guard" : "polite"}.` : "None yet."}</p>`;
 }
 
 function phoneTap() {
   const q = S.queue.find(q => ev(q).via === "telefoon");
   if (q) return openEvent(q);
-  const lines = [["Kessler", "‘Ik hoop dat u iets te melden heeft bij de jaarbeoordeling.’"], ["Centrale", "‘Verkeerd verbonden.’ Klik. Toch even ruis op de lijn."], ["Katrin", "‘Kom je op tijd thuis vandaag? Jens heeft een voetbalwedstrijd.’"]];
+  const lines = [["Kessler", "‘I hope you will have something to report at the annual assessment.’"], ["Switchboard", "‘Wrong number.’ Click. Still, a moment of static on the line."], ["Katrin", "‘Will you be home on time today? Jens has a football match.’"]];
   const [w, t] = rand(lines); toast(`<b>${w}:</b> ${t}`);
 }
 
 function showHelp() {
-  modal(`<h1>Hulp</h1><div class="result"><b>Kantoor</b>: tik op voorwerpen. Telefoon = opdrachten, map = rapporten, rode map = onderzoek, kast = alle personen, foto = gezin, kaart = wijk.
-<b>Wijk</b>: sleep om te kijken, tik op een gebouw.
-<b>Observeren</b> (1 ): ontdek kenmerken van iemand.
-<b>Werven</b> (1 ): maak iemand informant (IM). Die verklikt elke beurt een buur. Met chantagemateriaal lukt het vaker. IM's liegen soms.
-<b>Arresteren</b> (2 ): kan met 2 bevestigde verdachte kenmerken.
-<b>Microfoons</b> (2 ): elke beurt afgeluisterde gesprekken uit een gebouw.
-<b>Onderzoek</b>: vergelijk typemachine, papier en adres. Wijs de dader aan.</div>
-<button class="next" id="nx">Oké</button><button class="next ghost" id="ri">Uitleg opnieuw</button>`, m => { m.querySelector("#nx").onclick = closeModal; m.querySelector("#ri").onclick = showIntro; });
+  modal(`<h1>Help</h1><div class="result"><b>Office</b>: tap objects. Telephone = orders, folder = reports, red folder = case, cabinet = everyone, photo = family, map = district.
+<b>District</b>: drag to look around, tap a building.
+<b>Observe</b> (1 MP): discover someone's traits.
+<b>Recruit</b> (1 MP): make someone an informer (IM). They inform on a neighbour every turn. Leverage makes it more likely. IMs sometimes lie.
+<b>Arrest</b> (2 MP): possible with 2 confirmed suspicious traits.
+<b>Bugs</b> (2 MP): bugged conversations from a building every turn.
+<b>Case</b>: compare typewriter, paper and address. Name the culprit.</div>
+<button class="next" id="nx">OK</button><button class="next ghost" id="ri">Tutorial again</button>`, m => { m.querySelector("#nx").onclick = closeModal; m.querySelector("#ri").onclick = showIntro; });
 }
 
 function setMode(m) {
   world.setMode(m); document.body.dataset.mode = m; if (m === "district") tutDone(1);
   $("#navOffice").classList.toggle("on", m === "office"); $("#navWijk").classList.toggle("on", m === "district");
-  if (m === "district" && S && !S.flags._wijkHint) { S.flags._wijkHint = true; toast("Sleep om rond te kijken. Tik op een gebouw om te zien wie er woont of werkt."); }
+  if (m === "district" && S && !S.flags._wijkHint) { S.flags._wijkHint = true; toast("Drag to look around. Tap a building to see who lives or works there."); }
   updateCoach();
 }
 
 function showTitle() {
   const sv = load(); const f = endings();
   $("#title").classList.add("open");
-  $("#title").innerHTML = `<div class="tcard"><div class="kicker">Ost-Berlin · 1983–1989</div>
-   <h1 class="logo">AKTE<span>.</span></h1><div class="sub">Een Stasi-simulator</div>
-   <p>Bespioneer je wijk. Werf informanten. Beslis over levens. Tot de Muur valt.</p>
-   <button class="next" id="ng">Nieuw spel</button>${sv && !sv.over && TURNS[sv.t] ? `<button class="next ghost" id="cont">Doorgaan · ${esc(TURNS[sv.t].label)}</button>` : ""}
-   <p class="muted small">Eindes ontdekt: ${f.length}/${Object.keys(ENDINGS).length} · fictieve personen, echte geschiedenis</p></div>`;
+  $("#title").innerHTML = `<div class="tcard"><div class="kicker">East Berlin · 1983–1989</div>
+   <h1 class="logo">AKTE<span>.</span></h1><div class="sub">A Stasi simulator</div>
+   <p>Spy on your district. Recruit informers. Decide over lives. Until the Wall falls.</p>
+   <button class="next" id="ng">New game</button>${sv && !sv.over && TURNS[sv.t] ? `<button class="next ghost" id="cont">Continue · ${esc(TURNS[sv.t].label)}</button>` : ""}
+   <p class="muted small">Endings found: ${f.length}/${Object.keys(ENDINGS).length} · fictional people, real history</p></div>`;
   $("#ng").onclick = () => { $("#title").classList.remove("open"); newGame(); setMode("office"); showIntro(); };
-  const c = $("#cont"); if (c) c.onclick = () => { S = sv; $("#title").classList.remove("open"); if (S.tut === undefined) S.tut = 99; setMode("office"); refresh(); toast(`<b>${esc(turn().label)}</b> · ${S.mk} mankracht`); };
+  const c = $("#cont"); if (c) c.onclick = () => { S = sv; $("#title").classList.remove("open"); if (S.tut === undefined) S.tut = 99; setMode("office"); refresh(); toast(`<b>${esc(turn().label)}</b> · ${S.mk} manpower`); };
 }
 
 
 // ===================== UITLEG & BEGELEIDING =====================
 const TUT = [
-  { t: "De telefoon gaat. Tik op de <b>telefoon</b> op je bureau om op te nemen.", target: '#labels [data-id="o:telefoon"]', go: () => { setMode("office"); phoneTap(); } },
-  { t: "Bekijk je wijk: tik onderaan op <b>Wijk</b>.", target: "#navWijk", go: () => { closeSheet(); setMode("district"); } },
-  { t: "Tik op het gebouw <b>Kollwitz 12</b>. Daar woon jij, met je buren.", target: '#labels [data-id="b:kollwitz"]', go: () => { setMode("district"); openBuilding("kollwitz"); } },
-  { t: "Je ziet wie er woont. Tik op <b>Jutta Lang</b> om haar dossier te openen.", target: '#sheetBody [data-pid="jutta"]', go: () => { openBuilding("kollwitz"); sheet(e => personView(e, P("jutta"))); } },
-  { t: "Je weet nog niets over haar. Tik op <b>Observeren</b>. Dat kost 1 mankracht (een geel blokje).", target: '#sheetBody [data-a="observe"]', go: () => sheet(e => personView(e, P("jutta"))) },
-  { t: "Zo verzamel je informatie. Gebruik je laatste mankracht: <b>observeer nog iemand</b> uit je flat. Tik hier als je klaar bent.", target: null, go: () => tutDone(5) },
-  { t: "Tik op <b>Afsluiten</b> (rechtsonder) of hier. In de volgende beurt ontvang je nieuwe rapporten.", target: "#navEnd", go: () => confirmEnd() },
+  { t: "The phone is ringing. Tap the <b>telephone</b> on your desk to answer.", target: '#labels [data-id="o:telefoon"]', go: () => { setMode("office"); phoneTap(); } },
+  { t: "Look at your district: tap <b>District</b> at the bottom.", target: "#navWijk", go: () => { closeSheet(); setMode("district"); } },
+  { t: "Tap the building <b>Kollwitz 12</b>. You live there, with your neighbours.", target: '#labels [data-id="b:kollwitz"]', go: () => { setMode("district"); openBuilding("kollwitz"); } },
+  { t: "You can see who lives there. Tap <b>Jutta Lang</b> to open her file.", target: '#sheetBody [data-pid="jutta"]', go: () => { openBuilding("kollwitz"); sheet(e => personView(e, P("jutta"))); } },
+  { t: "You know nothing about her yet. Tap <b>Observe</b>. It costs 1 manpower (one yellow block).", target: '#sheetBody [data-a="observe"]', go: () => sheet(e => personView(e, P("jutta"))) },
+  { t: "That's how you gather information. Use your last manpower: <b>observe someone else</b> in your building. Tap here when you're done.", target: null, go: () => tutDone(5) },
+  { t: "Tap <b>End turn</b> (bottom right) or here. Next turn you will receive new reports.", target: "#navEnd", go: () => confirmEnd() },
 ];
 function tutDone(n) { if (!S || S.tut !== n) return; S.tut++; if (S.tut === 5 && S.mk <= 0) S.tut = 6; save(); updateCoach(); }
 
@@ -750,25 +752,25 @@ function nextStep() {
   if (!S || S.over) return null;
   if (S.tut !== undefined && S.tut < TUT.length) {
     if (S.tut === 5 && S.mk <= 0) S.tut = 6;
-    const st = TUT[S.tut]; return { text: `<span class="step">Stap ${S.tut + 1}/${TUT.length}</span> ${st.t}`, go: st.go, target: st.target, tut: true };
+    const st = TUT[S.tut]; return { text: `<span class="step">Step ${S.tut + 1}/${TUT.length}</span> ${st.t}`, go: st.go, target: st.target, tut: true };
   }
   const pend = via => S.queue.find(q => ev(q).via === via);
   let q;
-  if ((q = pend("telefoon"))) return { text: "<b>De telefoon gaat.</b> Tik hier om op te nemen.", go: () => openEvent(q), target: '#labels [data-id="o:telefoon"]' };
-  if ((q = pend("dossier"))) return { text: `<b>Opdracht:</b> ${esc(ev(q).title)}. Tik om te beslissen.`, go: () => openEvent(q) };
-  if ((q = pend("gezin"))) return { text: `<b>Thuis:</b> ${esc(ev(q).title)}. Tik om het te bekijken.`, go: () => openEvent(q) };
+  if ((q = pend("telefoon"))) return { text: "<b>The phone is ringing.</b> Tap here to answer.", go: () => openEvent(q), target: '#labels [data-id="o:telefoon"]' };
+  if ((q = pend("dossier"))) return { text: `<b>Order:</b> ${esc(ev(q).title)}. Tap to decide.`, go: () => openEvent(q) };
+  if ((q = pend("gezin"))) return { text: `<b>At home:</b> ${esc(ev(q).title)}. Tap to have a look.`, go: () => openEvent(q) };
   const unread = S.inbox.filter(i => !i.read).length;
-  if (unread) return { text: `<b>${unread} nieuwe rapport${unread > 1 ? "en" : ""}.</b> Tik om te lezen wat je te weten kwam.`, go: () => { setMode("office"); sheet(inboxView); } };
-  if (S.case && S.mk > 0) return { text: `<b>Onderzoek:</b> vind de dader (nog ${S.case.turns} beurt${S.case.turns > 1 ? "en" : ""}). Tik voor de verdachten.`, go: () => sheet(caseView) };
+  if (unread) return { text: `<b>${unread} new report${unread > 1 ? "s" : ""}.</b> Tap to read what you found out.`, go: () => { setMode("office"); sheet(inboxView); } };
+  if (S.case && S.mk > 0) return { text: `<b>Case:</b> find the culprit (${S.case.turns} turn${S.case.turns > 1 ? "s" : ""} left). Tap for the suspects.`, go: () => sheet(caseView) };
   if (S.mk > 0) {
     const lev = S.people.find(p => p.status === "vrij" && !p.family && !p.secretIM && Object.keys(p.known).some(t => TRAITS[t] && TRAITS[t].lev && p.known[t].s === "zeker"));
-    if (lev && imCount() < Math.min(rank().ims, S.quota.ims)) return { text: `<b>${esc(lev.name)}</b> is te chanteren. Werf ${pron(lev)} als informant (je hebt er ${imCount()}/${S.quota.ims} nodig).`, go: () => sheet(e => personView(e, lev)) };
+    if (lev && imCount() < Math.min(rank().ims, S.quota.ims)) return { text: `You have leverage on <b>${esc(lev.name)}</b>. Recruit ${obj(lev)} as an informer (you have ${imCount()}/${S.quota.ims} of the IMs you need).`, go: () => sheet(e => personView(e, lev)) };
     const arr = S.people.find(p => p.status === "vrij" && !p.family && evidence(p) && p.dis >= 30);
-    if (arr && S.mk >= 2 && S.res < S.quota.res) return { text: `Je hebt genoeg bewijs tegen <b>${esc(arr.name)}</b>. Arresteren levert een resultaat op. Of laat je het?`, go: () => sheet(e => personView(e, arr)) };
-    if (pool() < rank().bugs && S.mk >= 2) return { text: `Plaats <b>microfoons</b> in een gebouw (2 mankracht): elke beurt hoor je dan gesprekken.`, go: () => setMode("district") };
-    return { text: `Nog <b>${S.mk} mankracht</b>. Ga naar de wijk en observeer iemand die je nog niet kent.`, go: () => setMode("district") };
+    if (arr && S.mk >= 2 && S.res < S.quota.res) return { text: `You have enough evidence against <b>${esc(arr.name)}</b>. An arrest counts as a result. Or will you let it go?`, go: () => sheet(e => personView(e, arr)) };
+    if (pool() < rank().bugs && S.mk >= 2) return { text: `Plant <b>bugs</b> in a building (2 manpower): you will hear conversations every turn.`, go: () => setMode("district") };
+    return { text: `<b>${S.mk} manpower</b> left. Go to the district and observe someone you don't know yet.`, go: () => setMode("district") };
   }
-  return { text: "<b>Alles gedaan.</b> Tik hier om de beurt af te sluiten.", go: () => confirmEnd(), target: "#navEnd" };
+  return { text: "<b>All done.</b> Tap here to end the turn.", go: () => confirmEnd(), target: "#navEnd" };
 }
 let coachStep = null;
 function updateCoach() {
@@ -776,7 +778,7 @@ function updateCoach() {
   coachStep = nextStep();
   if (!coachStep || $("#title").classList.contains("open")) { el.className = ""; return; }
   el.className = "show" + (coachStep.tut ? " tut" : "");
-  el.innerHTML = `<div class="ct">${coachStep.text}</div>${coachStep.tut ? `<button class="skip" id="tutSkip">Uitleg overslaan</button>` : '<span class="arr">›</span>'}`;
+  el.innerHTML = `<div class="ct">${coachStep.text}</div>${coachStep.tut ? `<button class="skip" id="tutSkip">Skip tutorial</button>` : '<span class="arr">›</span>'}`;
   const sk = el.querySelector("#tutSkip"); if (sk) sk.onclick = ev2 => { ev2.stopPropagation(); S.tut = 99; save(); updateCoach(); };
 }
 setInterval(() => {
@@ -786,16 +788,16 @@ setInterval(() => {
 
 function showIntro() {
   const pages = [
-    ["Jij bent de Stasi", "", "Oost-Berlijn, 1983. Jij houdt één wijk in de gaten voor de geheime dienst van de DDR.\n\nJe baas <b>Kessler</b> wil resultaten. Jouw keuzes bepalen wat er met de mensen gebeurt."],
-    ["Zo speel je", "", "<b>1.</b> Beslis wat er gebeurt als de telefoon gaat.\n<b>2.</b> Gebruik je <b>mankracht</b> in de wijk: mensen <b>observeren</b>, <b>informanten werven</b>, <b>arresteren</b>.\n<b>3.</b> Tik op <b>Afsluiten</b>. Op naar de volgende beurt.\n\nOnderaan staat altijd wat je nu kunt doen."],
-    ["Pas op", "", "<b>Gunst</b> op 0: je wordt ontslagen.\n<b>Verdenking</b> op 100: je wordt zelf opgepakt.\nJe <b>geweten</b> bepaalt hoe jouw verhaal afloopt.\n\n32 beurten, van 1983 tot de val van de Muur. 8 eindes."],
+    ["You are the Stasi", "", "East Berlin, 1983. You keep watch over one district for the GDR's secret police.\n\nYour boss <b>Kessler</b> wants results. Your choices decide what happens to the people."],
+    ["How to play", "", "<b>1.</b> Decide what happens when the phone rings.\n<b>2.</b> Use your <b>manpower</b> in the district: <b>observe</b> people, <b>recruit informers</b>, <b>arrest</b>.\n<b>3.</b> Tap <b>End turn</b>. On to the next turn.\n\nThe strip at the bottom always shows what you can do now."],
+    ["Careful", "", "<b>Favour</b> at 0: you are dismissed.\n<b>Suspicion</b> at 100: you are arrested yourself.\nYour <b>conscience</b> decides how your story ends.\n\n32 turns, from 1983 to the fall of the Wall. 8 endings."],
   ];
   let i = 0;
   const draw = () => {
     const [h, ic, txt] = pages[i];
     modal(`<div class="kicker">Einweisung ${i + 1}/${pages.length}</div><h1>${h}</h1><div class="result">${txt}</div>
       <div class="dots">${pages.map((_, k) => `<i class="${k === i ? "on" : ""}"></i>`).join("")}</div>
-      <button class="next" id="nx">${i < pages.length - 1 ? "Verder" : "Spelen"}</button>${i === 0 ? '<button class="next ghost" id="sk">Overslaan</button>' : ""}`, m => {
+      <button class="next" id="nx">${i < pages.length - 1 ? "Next" : "Play"}</button>${i === 0 ? '<button class="next ghost" id="sk">Skip</button>' : ""}`, m => {
       m.querySelector("#nx").onclick = () => { if (i < pages.length - 1) { i++; draw(); } else { closeModal(); updateCoach(); } };
       const sk = m.querySelector("#sk"); if (sk) sk.onclick = () => { S.tut = 99; closeModal(); updateCoach(); };
     }, { lock: true });
@@ -804,28 +806,28 @@ function showIntro() {
 }
 
 function explainMeters() {
-  modal(`<h1>De meters</h1><div class="result"><b class="cg">Gunst</b>: hoe tevreden Kessler is. Op 0 ben je ontslagen.
-<b class="cc">Geweten</b>: daalt als je mensen schade doet. Bepaalt je einde.
-<b class="cd">Verdenking</b>: hoe verdacht jij zelf bent. Op 100 word je opgepakt.
-<b class="cm">Mankracht</b> : acties per beurt. Wat je niet gebruikt, vervalt.
-<b>Jaardoel</b>: wat Kessler in de herfst wil zien. Haal het en je krijgt promotie.</div><button class="next" id="nx">Oké</button>`, m => m.querySelector("#nx").onclick = closeModal);
+  modal(`<h1>The meters</h1><div class="result"><b class="cg">Favour</b>: how pleased Kessler is. At 0 you are dismissed.
+<b class="cc">Conscience</b>: drops when you harm people. Decides your ending.
+<b class="cd">Suspicion</b>: how suspect you yourself are. At 100 you are arrested.
+<b class="cm">Manpower</b> (MP): actions per turn. What you don't use is lost.
+<b>Annual target</b>: what Kessler wants to see by the end of the year. Meet it and you are promoted.</div><button class="next" id="nx">OK</button>`, m => m.querySelector("#nx").onclick = closeModal);
 }
 
 function susCount(p) { return Object.keys(p.known).filter(t => p.known[t].s === "zeker" && TRAITS[t] && (TRAITS[t].dis || 0) >= 10).length; }
 function personAdvice(p) {
-  if (p.secretIM) return "Deze kaart is geblokkeerd. Iemand boven jou beschermt deze persoon.";
-  if (p.status === "im") return p.known.dubbel ? "Deze informant speelt dubbelspel. Afstoten is verstandig." : p.lies ? "Deze informant heeft gelogen. Wantrouw de rapporten, of stoot hem af." : `Informant. Rapporteert elke beurt over een buur of collega. Je kunt een specifieke opdracht geven.`;
-  if (!free(p)) return "Deze persoon is buiten jouw bereik.";
+  if (p.secretIM) return "This card is blocked. Someone above you is protecting this person.";
+  if (p.status === "im") return p.known.dubbel ? "This informer is a double agent. Dropping them is wise." : p.lies ? "This informer has lied. Distrust the reports, or drop them." : `Informer. Reports on a neighbour or colleague every turn. You can give a specific assignment.`;
+  if (!free(p)) return "This person is beyond your reach.";
   const levs = Object.keys(p.known).filter(t => TRAITS[t] && TRAITS[t].lev && p.known[t].s === "zeker");
   const unconf = Object.keys(p.known).filter(t => p.known[t].s === "IM").length;
   const known = Object.keys(p.known).length;
   const out = [];
-  if (!known) out.push("Je weet nog niets. <b>Observeer</b> om erachter te komen wat er speelt.");
-  if (unconf) out.push(`Er ${unconf > 1 ? "zijn" : "is"} ${unconf} onbevestigd${unconf > 1 ? "e" : ""} kenmerk${unconf > 1 ? "en" : ""} (van een informant). <b>Observeer</b> om te controleren of het klopt.`);
-  if (levs.length && p.status === "vrij" && !p.family) out.push(`Je hebt <b>chantagemateriaal</b> (${esc(trLabel(levs[0]).toLowerCase())}). Werven als informant heeft een goede kans.`);
-  if (evidence(p)) out.push("Je hebt <b>genoeg bewijs</b> om te arresteren.");
-  else if (susCount(p) === 1) out.push("Nog één bevestigd verdacht kenmerk nodig voor een arrestatie.");
-  if (known && !out.length) out.push("Lijkt een gewone burger. Je kunt verder kijken, of je mankracht elders gebruiken.");
+  if (!known) out.push("You know nothing yet. <b>Observe</b> to find out what is going on.");
+  if (unconf) out.push(`There ${unconf > 1 ? "are" : "is"} ${unconf} unconfirmed trait${unconf > 1 ? "s" : ""} (from an informer). <b>Observe</b> to check whether it is true.`);
+  if (levs.length && p.status === "vrij" && !p.family) out.push(`You have <b>leverage</b> (${esc(trLabel(levs[0]).toLowerCase())}). Recruiting them as an informer has a good chance.`);
+  if (evidence(p)) out.push("You have <b>enough evidence</b> to arrest.");
+  else if (susCount(p) === 1) out.push("One more confirmed suspicious trait needed for an arrest.");
+  if (known && !out.length) out.push("Looks like an ordinary citizen. You can dig further, or use your manpower elsewhere.");
   return out.join(" ");
 }
 
@@ -860,9 +862,9 @@ async function boot() {
 }
 function confirmEnd() {
   if (!S || S.over) return;
-  if (S.queue.length) { toast("Eerst de wachtende zaken afhandelen."); return openEvent(S.queue[0]); }
-  modal(`<h1>Beurt afsluiten?</h1><div class="result">${S.mk ? `Je hebt nog <b>${S.mk} mankracht</b> over. Die vervalt.\n\nDe volgende beurt is <b>${esc((TURNS[S.t + 1] || turn()).label)}</b>.` : "Alle mankracht is gebruikt."}${S.case ? `\n\nHet onderzoek loopt nog ${S.case.turns} beurt(en).${S.case.turns === 1 ? " Daarna is het te laat." : ""}` : ""}${turn().review ? "\n\nHierna volgt de jaarbeoordeling." : ""}</div>
-   <div class="choices"><button class="ch" id="y"><b>Rapport typen en afsluiten</b></button><button class="ch" id="n"><b>Nog niet</b></button></div>`,
+  if (S.queue.length) { toast("Deal with the waiting matters first."); return openEvent(S.queue[0]); }
+  modal(`<h1>End the turn?</h1><div class="result">${S.mk ? `You still have <b>${S.mk} manpower</b> left. It will be lost.\n\nThe next turn is <b>${esc((TURNS[S.t + 1] || turn()).label)}</b>.` : "All manpower has been used."}${S.case ? `\n\nThe case runs for ${S.case.turns} more turn(s).${S.case.turns === 1 ? " After that it is too late." : ""}` : ""}${turn().review ? "\n\nThe annual assessment follows." : ""}</div>
+   <div class="choices"><button class="ch" id="y"><b>Type the report and end the turn</b></button><button class="ch" id="n"><b>Not yet</b></button></div>`,
     m => { m.querySelector("#y").onclick = () => { closeModal(); closeSheet(); endTurn(); }; m.querySelector("#n").onclick = closeModal; });
 }
 boot();
