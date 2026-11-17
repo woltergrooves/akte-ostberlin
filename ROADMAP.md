@@ -72,6 +72,13 @@ De belangrijkste blokjes zijn vervangen door echte low-poly modellen. Lukt het l
 
 ## Fase 3: Animaties
 
+**Fixes**
+- [ ] Opdrachten verdwijnen na één beslissing (nu kun je ze opnieuw openen en kiezen)
+- [ ] Postvak in overzichtelijker: opdrachten bovenaan, berichten per beurt, soort als label, oudere beurten ingeklapt
+
+**Publicatie**
+- [x] Vercel-project `akte-ostberlin`, gekoppeld aan GitHub: elke push naar `main` gaat live op de hoofdlink (geen previews)
+
 **Eerste-persoonshanden in het kantoor** (rigged handen, bijv. via itch.io of Blender Rigify)
 - [ ] Hoorn van de telefoon oppakken en tegen het oor houden als hij gaat
 - [ ] Dossier van de stapel pakken en openslaan
