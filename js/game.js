@@ -570,22 +570,56 @@ function buildingView(el, id) {
   bindRows(el);
 }
 
+// ---------- kartotheek: zoeken, filters met tellers, laden per adres ----------
+const GONE = ["gevangen", "gevlucht", "uitgereisd", "overgeplaatst"];
+const KF = [
+  ["", "Alle", () => true],
+  ["sus", "Verdacht", p => free(p) && (susCount(p) > 0 || ["gemiddeld", "hoog"].includes(hostility(p)))],
+  ["im", "IM's", p => p.status === "im"],
+  ["case", "Onderzoek", p => S.case && free(p) && matchesShown(p, S.case)],
+  ["unk", "Onbekend", p => free(p) && !Object.keys(p.known).length],
+  ["gone", "Weg", p => GONE.includes(p.status)],
+];
+function susLevel(p) { const h = hostility(p); return h === "hoog" ? 3 : h === "gemiddeld" ? 2 : h === "laag" ? 1 : h === "onbekend" ? -1 : 0; }
+function cardRow(p, sub) {
+  const st = { im: `<span class="tag blue">IM „${esc(p.code)}“</span>`, gevangen: '<span class="tag grey">gevangen</span>', zersetzt: '<span class="tag red">zersetzt</span>', gevlucht: '<span class="tag grey">gevlucht</span>', uitgereisd: '<span class="tag grey">uitgereisd</span>', overgeplaatst: '<span class="tag grey">overgeplaatst</span>' }[p.status] || "";
+  const lv = susLevel(p);
+  const leds = lv < 0 ? `<span class="sus3 unk" title="nog niets bekend">?</span>` : `<span class="sus3">${[1, 2, 3].map(i => `<i class="${i <= lv ? "on" : ""}"></i>`).join("")}</span>`;
+  return `<button class="row card${GONE.includes(p.status) ? " gone" : ""}" data-pid="${p.id}"><span class="rn"><b>${esc(p.name)}</b> ${st}${S.taps[p.id] ? ' <span class="tag red">getapt</span>' : ""}<small>${esc(sub)}</small></span><span class="rp">${leds}<span>${p.pages}<small> pag.</small></span></span></button>`;
+}
 function cartotheek(el) {
-  const f = cartotheek.f || (cartotheek.f = { q: "", b: "", s: "" });
-  if (f.s === "case" && !S.case) f.s = "";
-  el.innerHTML = `<div class="kicker">Kartotheek F16 · ${S.people.length} personen</div><h2>Kartotheek</h2>
-   <div class="filters"><input id="fq" placeholder="Zoek naam of beroep" value="${esc(f.q)}"><select id="fb"><option value="">Alle gebouwen</option>${BUILDINGS.filter(b => b.id !== "mfs").map(b => `<option value="${b.id}" ${f.b === b.id ? "selected" : ""}>${esc(b.name)}</option>`).join("")}</select>
-   <select id="fs"><option value="">Iedereen</option>${S.case ? `<option value="case" ${f.s === "case" ? "selected" : ""}>Past bij onderzoek</option>` : ""}<option value="im" ${f.s === "im" ? "selected" : ""}>IM's</option><option value="vrij" ${f.s === "vrij" ? "selected" : ""}>Vrij</option><option value="gevangen" ${f.s === "gevangen" ? "selected" : ""}>Gevangen</option><option value="zersetzt" ${f.s === "zersetzt" ? "selected" : ""}>Zersetzt</option></select></div>
-   <div id="rows"></div>`;
-  const rows = el.querySelector("#rows");
+  const f = cartotheek.f || (cartotheek.f = { q: "", c: "", v: "adres", open: {} });
+  if (f.c === "case" && !S.case) f.c = "";
+  const chipsHTML = () => KF.filter(([k]) => k !== "case" || S.case).map(([k, l, fn]) => { const n = S.people.filter(fn).length; return `<button class="kchip${f.c === k ? " on" : ""}${k === "case" ? " red" : ""}" data-c="${k}" ${!n && k ? "disabled" : ""}>${l}<b>${n}</b></button>`; }).join("");
+  el.innerHTML = `<div class="kicker">Kartotheek F16 · ${S.people.length} kaarten</div><h2>Kartotheek</h2>
+   <input id="fq" class="ksearch" type="search" placeholder="Zoek naam, beroep of werkplek" value="${esc(f.q)}" autocomplete="off">
+   <div class="kchips" id="kc"></div>
+   <div class="kview"><button data-v="adres" class="${f.v === "adres" ? "on" : ""}">Per adres</button><button data-v="dik" class="${f.v === "dik" ? "on" : ""}">Dikste dossiers</button></div>
+   <div id="rows"></div>
+   <p class="muted small klegend"><span class="sus3"><i class="on"></i><i class="on"></i><i></i></span> = wat je weet over hun houding · <b>?</b> = nog niets bekend</p>`;
+  const rows = el.querySelector("#rows"), kc = el.querySelector("#kc");
+  const wp = p => p.work ? (WORKPLACES[p.work] || {}).name || "" : "";
   const draw = () => {
-    f.q = el.querySelector("#fq").value; f.b = el.querySelector("#fb").value; f.s = el.querySelector("#fs").value;
-    const list = S.people.filter(p => !f.b || p.home === f.b || p.work === f.b).filter(p => !f.s || (f.s === "case" ? S.case && free(p) && matchesShown(p, S.case) : p.status === f.s)).filter(p => !f.q || p.name.toLowerCase().includes(f.q.toLowerCase()) || p.job.toLowerCase().includes(f.q.toLowerCase()));
-    list.sort((a, b) => b.pages - a.pages || a.name.localeCompare(b.name));
-    rows.innerHTML = list.map(p => personRow(p)).join("") || "<p class='muted'>Niemand gevonden.</p>";
+    kc.innerHTML = chipsHTML();
+    kc.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { f.c = f.c === b.dataset.c ? "" : b.dataset.c; draw(); });
+    el.querySelectorAll("[data-v]").forEach(b => b.classList.toggle("on", b.dataset.v === f.v));
+    const fn = (KF.find(x => x[0] === f.c) || KF[0])[2], q = f.q.trim().toLowerCase();
+    const list = S.people.filter(fn).filter(p => !q || [p.name, p.job, wp(p), Bd(p.home).name].some(x => x.toLowerCase().includes(q)));
+    if (!list.length) { rows.innerHTML = "<p class='muted'>Geen kaarten gevonden.</p>"; return; }
+    const byPages = (a, b) => b.pages - a.pages || a.name.localeCompare(b.name);
+    if (f.v === "dik") {
+      rows.innerHTML = list.sort(byPages).map(p => cardRow(p, `${p.job} · ${Bd(p.home).name}`)).join("");
+    } else {
+      const homes = BUILDINGS.filter(b => b.res && list.some(p => p.home === b.id));
+      const auto = !!(q || f.c);   // bij zoeken of filter: alle laden open
+      rows.innerHTML = homes.map(b => { const ps = list.filter(p => p.home === b.id).sort(byPages); const ims = ps.filter(p => p.status === "im").length, sus = ps.filter(KF[1][2]).length;
+        return `<details class="lade" data-b="${b.id}"${auto || f.open[b.id] ? " open" : ""}><summary><span class="lt">${esc(b.name)}</span><span class="lc">${ims ? `<em class="blue">${ims} IM</em>` : ""}${sus ? `<em class="red">${sus} verd.</em>` : ""}<b>${ps.length}</b></span></summary>${ps.map(p => cardRow(p, `${p.job}${wp(p) ? " · " + wp(p) : ""} · ${p.age} jaar`)).join("")}</details>`; }).join("");
+      rows.querySelectorAll("details.lade").forEach(d => d.ontoggle = () => { if (!auto) f.open[d.dataset.b] = d.open; });
+    }
     bindRows(rows);
   };
-  el.querySelector("#fq").oninput = draw; el.querySelector("#fb").onchange = draw; el.querySelector("#fs").onchange = draw;
+  el.querySelector("#fq").oninput = e => { f.q = e.target.value; draw(); };
+  el.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { f.v = b.dataset.v; draw(); });
   draw();
 }
 

@@ -75,6 +75,8 @@ De belangrijkste blokjes zijn vervangen door echte low-poly modellen. Lukt het l
 **Fixes**
 - [x] Opdrachten verdwijnen na één beslissing (getest: tweede poging doet niets)
 - [x] Postvak in overzichtelijker: opdrachten bovenaan, nieuw apart, soort als Dymo-label, eerste regel met uitklappen, oudere beurten ingeklapt
+- [x] Kartotheek overzichtelijk: zoeken (ook op werkplek/adres), filters met tellers (Verdacht, IM's, Onderzoek, Onbekend, Weg), laden per adres of dikste dossiers eerst, verdenkingsmeter per kaart
+- [x] iPhone: invoervelden 16px (Safari zoomt niet meer in), kop van het sheet schuift niet meer over de inhoud
 
 **Tempo en geschiedenis**
 - [x] Langzamer: begin in maart 1983, 32 beurten (vier per jaar, vijf in 1987, zeven in 1989); nieuwe jaardoelen; save-key `akte-save-v4`

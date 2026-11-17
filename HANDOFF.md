@@ -38,6 +38,7 @@ Lees dit bestand eerst. Het wordt na elke fase bijgewerkt.
 ## Status
 - Klaar: fase 1, 1b, 2 en **fase 3 A+B** (17 nov). Speelbaar op https://akte-ostberlin.vercel.app (alleen deze link gebruiken).
 - 3A: `openEvent`/`chooseEvent` stoppen als `q` niet meer in `S.queue` staat; keuzeknoppen gaan direct uit; na een keuze `rerender()`. Postvak (`inboxView`, `msgHTML`, `KLAB`): wacht-op-jou bovenaan, nieuw apart, Dymo-label per soort, eerste regel + uitklappen, oudere beurten in `<details>`.
+- Kartotheek (`cartotheek`, `cardRow`, `KF`, `susLevel`): filters met tellers, laden per adres (`details.lade`) of “Dikste dossiers”; filterstand blijft bewaard in `cartotheek.f`. Inputs zijn 16px (iOS-zoom).
 - 3B: 32 beurten, 9 nieuwe scènes (embleem, Frauen für den Frieden, Ständige Vertretung, Gorbatsjov, Umwelt-Bibliothek, Palme-mars, skinheads Zionskirche, Gueffroy, Alexanderplatz). Bronnen staan in `ROADMAP.md` bij fase 3. Jaardoelen `QUOTA` 1983–1989, save-key `akte-save-v4`. Fuchs-vlag `S.flags.fuchsMet`. Lege beurten (zonder vaste scène): dec. 1984, mrt. 1986, dec. 1986.
 - Test 17 nov: volledige ronde 1983 → epiloog zonder consolefouten (Playwright-script lag in `/tmp`, niet in de repo).
 
