@@ -5,7 +5,7 @@ Lees dit bestand eerst. Het wordt na elke fase bijgewerkt.
 ## Project
 - Stasi-simulator in de browser: three.js r160 via importmap, ES-modules, geen build-stap.
 - Repo: `woltergrooves/akte-ostberlin`. `main` is altijd speelbaar. Roadmap: `ROADMAP.md` (ook in het project als `claude/akte-roadmap.md`).
-- Speelbare versie: artifact-slug `da2f9866-80d4-47bd-99ec-b3ab77febc71`. Na elke fase alle bestanden opnieuw publiceren (publish_files, inclusief assets).
+- Speelbare versie: artifact-slug `da2f9866-80d4-47bd-99ec-b3ab77febc71`. Na elke fase opnieuw publiceren. Het artifact serveert geen `.glb`: maak eerst een kopie met `cd tools && node make-artifact.mjs /home/claude/akte-artifact` (modellen als base64 in `assets/models/bundle.js`, zonder meshopt zodat er geen WebAssembly nodig is) en publiceer die map met publish_files.
 - Doelapparaat: iPhone/iPad Safari.
 
 ## Bestanden
@@ -17,7 +17,7 @@ Lees dit bestand eerst. Het wordt na elke fase bijgewerkt.
 - `js/world.js`: 3D-kantoor en -wijk. `createWorld(container, H, models)`. Elk model heeft een fallback naar de oude blokjes als het niet laadt. PS2-nabewerking: render op ±460p, 15-bit dither.
 - `js/game.js`: regels, interface, uitleg, coach. `boot()` is async: eerst modellen laden, dan de wereld.
 - `assets/models/`: 17 `.glb` (±375 kB, meshopt). Bron en licentie: `CREDITS.md`.
-- `tools/`: `build-models.mjs` (eigen modellen), `build-figures.mjs` (Quaternius-figuren), `fetch-sources.sh`. `cd tools && npm i` eerst.
+- `tools/`: `build-models.mjs` (eigen modellen), `build-figures.mjs` (Quaternius-figuren), `fetch-sources.sh`, `make-artifact.mjs`. `cd tools && npm i` eerst.
 
 ## Technische notities (fase 2)
 - Netwerk in de werkomgeving: Kenney en Poly Pizza geven 403, de Google Drive van Quaternius geeft "quota exceeded". `raw.githubusercontent.com` werkt wel (mirror `trebeljahr/quaternius-showcase`). jsDelivr en npm werken.

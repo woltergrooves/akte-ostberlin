@@ -30,7 +30,12 @@ export function loadModels(onProgress = () => {}) {
   const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
   const names = [...PROPS, ...FIGURES]; const out = {}; let done = 0;
   const step = () => onProgress(++done / names.length);
-  return Promise.all(names.map(n => loader.loadAsync(`assets/models/${n}.glb`)
+  // In de artifact-versie (claude.ai serveert geen .glb) zitten de modellen als base64 in assets/models/bundle.js.
+  const B = window.AKTE_MODELS;
+  const get = n => B && B[n]
+    ? loader.parseAsync(Uint8Array.from(atob(B[n]), c => c.charCodeAt(0)).buffer, "")
+    : loader.loadAsync(`assets/models/${n}.glb`);
+  return Promise.all(names.map(n => get(n)
     .then(g => { out[n] = ps2(g.scene, n.startsWith("fig_")); })
     .catch(e => { console.warn("Model niet geladen:", n, e && e.message); out[n] = null; })
     .finally(step)))
