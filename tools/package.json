@@ -1,0 +1,14 @@
+{
+  "name": "akte-tools",
+  "private": true,
+  "type": "module",
+  "description": "Bouwscripts voor de 3D-modellen (niet nodig om het spel te spelen)",
+  "scripts": { "models": "node build-models.mjs && node build-figures.mjs" },
+  "dependencies": {
+    "@gltf-transform/core": "^4.1.0",
+    "@gltf-transform/extensions": "^4.1.0",
+    "@gltf-transform/functions": "^4.1.0",
+    "meshoptimizer": "^0.22.0",
+    "three": "0.160.0"
+  }
+}

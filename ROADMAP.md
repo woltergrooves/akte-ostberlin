@@ -22,17 +22,17 @@ We werken in fases. Elke fase krijgt een eigen branch (`fase-N`) en wordt daarna
 
 ---
 
-## Fase 2: Echte 3D-modellen (asset-pipeline)
+## ✅ Fase 2: Echte 3D-modellen (asset-pipeline)
 
-Nu is alles opgebouwd uit blokjes in code. In deze fase vervangen we dat door echte low-poly modellen die in Blender worden voorbereid.
+De belangrijkste blokjes zijn vervangen door echte low-poly modellen. Lukt het laden niet, dan valt het spel terug op de oude blokjes.
 
 **Werkwijze**
-- [ ] Map `assets/models/` met `.glb`-bestanden, ingeladen met three.js `GLTFLoader`
-- [ ] Blender als werkplaats: modellen importeren, polygonen terugbrengen (Decimate), texturen verkleinen naar 128–256 px, exporteren als `.glb`
-- [ ] PS2-budget: rekwisieten ±300–1.500 driehoeken, personages ±1.500–3.000, texturen 128–256 px met *nearest*-filter
-- [ ] Compressie (meshopt of Draco) zodat het snel laadt op een iPhone
-- [ ] `CREDITS.md` met bron en licentie per model
-- [ ] Laadscherm met voortgangsbalk
+- [x] Map `assets/models/` met 17 `.glb`-bestanden, ingeladen met three.js `GLTFLoader` (`js/assets.js`)
+- [x] Werkplaats in Node in plaats van Blender: `tools/build-models.mjs` (eigen modellen, three.js → glTF Transform) en `tools/build-figures.mjs` (Quaternius samenvoegen, herkleuren, decimeren met meshopt)
+- [x] PS2-budget: rekwisieten 180–1.000 driehoeken, tram 1.600, personages 2.400. Geen texturen nodig: vertexkleuren met Lambert-facetten
+- [x] Compressie met meshopt + quantisatie: alle modellen samen ±375 kB
+- [x] `CREDITS.md` met bron en licentie per model
+- [x] Laadscherm met voortgangsbalk (LED-balk op staal)
 
 **Bronnen**
 
@@ -50,22 +50,24 @@ Nu is alles opgebouwd uit blokjes in code. In deze fase vervangen we dat door ec
 **Modellenlijst**
 
 *Kantoor*
-- [ ] Bakelieten telefoon (W63-stijl) met losse hoorn
-- [ ] Typemachine (Erika/Robotron), bureaulamp, stempel en stempelkussen, asbak
+- [x] Bakelieten telefoon (W63-stijl) met losse hoorn en kiesschijf (nodes `Handset`, `Dial`)
+- [x] Typemachine (Erika/Robotron, wagen en papier los), bureaulamp, stempel en stempelkussen, asbak
 - [ ] Kartotheekkast met lades die opengaan, archiefdozen, dossiermappen
-- [ ] Radio (RFT), koffiekop, bandrecorder (voor afgeluisterde gesprekken)
+- [x] Koffiekop
+- [ ] Radio (RFT), bandrecorder (voor afgeluisterde gesprekken)
 - [ ] Bureaustoel, kapstok met leren jas, rolluik, plafondlamp
 
 *Wijk*
-- [ ] Trabant 601 en 601 Kombi, Wartburg 353, Barkas B1000-busje, Ikarus-bus
-- [ ] Tatra KT4D-tram met stroomafnemer
+- [x] Trabant 601, Wartburg 353 (lak per auto in een andere kleur)
+- [ ] Trabant 601 Kombi, Barkas B1000-busje, Ikarus-bus
+- [x] Tatra KT4D-tram met stroomafnemer (rijdraad hangt nu op de juiste hoogte)
 - [ ] Altbau-gevels met erkers, balkons en binnenplaatsen
 - [ ] WBS 70-Plattenbau in modulaire delen
 - [ ] Peitschenleuchte, litfaßzuil, telefooncel, kiosk, Ampelmännchen-stoplicht, kolenkelderluik
 - [ ] Muur (Grenzmauer 75) met wachttoren, Fernsehturm
 
 *Personages*
-- [ ] 6–8 basisfiguren (arbeider, oude vrouw, punk, dominee, Vopo, Stasi-man in leren jas) met verwisselbare kleuren
+- [x] 8 basisfiguren (arbeider, oude vrouw, punk, dominee, Vopo, Stasi-man in leren jas, burger, burgeres) met skelet; armen en benen bewegen al mee bij het lopen
 - [ ] Kessler, Fuchs, Katrin en Jens als eigen modellen
 
 ## Fase 3: Animaties

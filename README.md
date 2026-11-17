@@ -30,11 +30,14 @@ De 3D-graphics laden [three.js](https://threejs.org) (r160) via jsDelivr, dus de
 
 ```
 index.html        pagina, laadt three.js via importmap
-css/style.css     moderne interface (donker, glas, Inter + Space Grotesk)
+css/style.css     huisstijl DDR × PS2 (staal, Dymo, telex, dossierpapier)
 js/data.js        tijdlijn, rangen, gebouwen, kenmerken, personages
 js/events.js      verhaal: vaste en voorwaardelijke gebeurtenissen
+js/assets.js      laadt de 3D-modellen (GLTFLoader + meshopt)
 js/world.js       3D: kantoor + wijk, PS2-stijl (lage resolutie, dither, Lambert-shading)
 js/game.js        spelregels, interface, uitleg en begeleiding
+assets/models/    3D-modellen (.glb), zie CREDITS.md
+tools/            bouwscripts voor de modellen (niet nodig om te spelen)
 ```
 
 Zie [ROADMAP.md](ROADMAP.md) voor de fases.

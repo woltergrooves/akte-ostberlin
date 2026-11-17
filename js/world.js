@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { BUILDINGS } from "./data.js";
+import { instance } from "./assets.js";
 
 const SHORT = { kollwitz: "Kollwitz 12", lychener: "Lychener 40", greif: "Greifswalder", dimi: "Dimitroff", kerk: "Zionskirche", fabriek: "Bergmann-Borsig", school: "EOS-school", kliniek: "Poliklinik", cafe: "Café Mosaik", konsum: "Kaufhalle", mfs: "MfS" };
 const CELL = 6.5;
@@ -65,7 +66,7 @@ function facadePlatte(color, floors, cols, seed) {
   });
 }
 
-export function createWorld(container, H) {
+export function createWorld(container, H, M = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(0.5);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.BasicShadowMap;
@@ -195,7 +196,9 @@ export function createWorld(container, H) {
   const pen = cyl(0.008, 0.008, 0.16, mat(0x1b2a4a, { roughness: 0.3 }), -0.38, DESK_Y + 0.02, 0.78, 8); pen.rotation.set(Math.PI / 2, 0, 0.9); desk.add(pen);
   const stamp = new THREE.Group(); stamp.add(cyl(0.035, 0.04, 0.03, mat(0x3a2a1c), 0, DESK_Y + 0.015, 0)); stamp.add(cyl(0.015, 0.015, 0.07, mat(0x5a3d24), 0, DESK_Y + 0.065, 0, 10)); const knob = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 8), mat(0x2a1d12, { roughness: 0.3 })); knob.position.y = DESK_Y + 0.11; stamp.add(knob);
   stamp.position.set(0.72, 0, 0.5); desk.add(stamp);
-  desk.add(cyl(0.05, 0.05, 0.012, mat(0x7a1b16), 0.62, DESK_Y + 0.006, 0.58, 16));
+  const padOld = cyl(0.05, 0.05, 0.012, mat(0x7a1b16), 0.62, DESK_Y + 0.006, 0.58, 16); desk.add(padOld);
+  const stampM = instance(M, "stempel");
+  if (stampM) { stamp.clear(); stampM.position.y = DESK_Y; stamp.add(stampM); padOld.visible = false; }
   desk.add(box(0.6, DESK_Y - 0.06, 0.95, deskMat, 0.75, (DESK_Y - 0.06) / 2, -0.25));
   desk.add(box(0.6, DESK_Y - 0.06, 0.95, deskMat, -0.75, (DESK_Y - 0.06) / 2, -0.25));
   for (let i = 0; i < 3; i++) { desk.add(box(0.5, 0.18, 0.01, mat(0x4a321e), 0.75, 0.15 + i * 0.22, 0.226)); desk.add(box(0.12, 0.02, 0.03, mat(0xb8a878, { metalness: 0.7, roughness: 0.3 }), 0.75, 0.2 + i * 0.22, 0.24)); }
@@ -212,6 +215,8 @@ export function createWorld(container, H) {
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffe2a8 })); bulb.position.set(0, DESK_Y + 0.37, 0); lamp.add(bulb);
   lamp.position.set(-0.82, 0, -0.55); O.add(lamp);
   lampLight.position.set(-0.82, DESK_Y + 0.33, -0.55);
+  const lampM = instance(M, "bureaulamp");
+  if (lampM) { lamp.clear(); lampM.position.y = DESK_Y; lamp.add(lampM); lampLight.position.y = DESK_Y + 0.35; }
 
   // telefoon (W63-achtig)
   const phone = new THREE.Group();
@@ -219,10 +224,13 @@ export function createWorld(container, H) {
   const body = box(0.24, 0.09, 0.2, phMat, 0, DESK_Y + 0.045, 0); phone.add(body);
   const top = box(0.2, 0.04, 0.12, phMat, 0, DESK_Y + 0.1, -0.02); phone.add(top);
   const dial = cyl(0.065, 0.065, 0.012, mat(0xe8e2d0), 0, DESK_Y + 0.095, 0.06, 24); dial.rotation.x = -0.5; phone.add(dial);
-  const handset = new THREE.Group();
+  let handset = new THREE.Group();
   handset.add(box(0.26, 0.035, 0.05, phMat, 0, 0, 0)); handset.add(box(0.07, 0.05, 0.065, phMat, -0.11, -0.01, 0)); handset.add(box(0.07, 0.05, 0.065, phMat, 0.11, -0.01, 0));
   handset.position.set(0, DESK_Y + 0.14, -0.02); phone.add(handset);
   phone.position.set(-0.45, 0, -0.08); phone.rotation.y = 0.35; O.add(phone);
+  let hsBaseY = DESK_Y + 0.14;
+  const phoneM = instance(M, "telefoon");
+  if (phoneM) { phone.clear(); phoneM.position.y = DESK_Y; phoneM.scale.setScalar(1.05); phone.add(phoneM); const hs = phoneM.getObjectByName("Handset"); if (hs) { handset = hs; hsBaseY = hs.position.y; } }
   tappable(phone, "telefoon", "Telefoon", new THREE.Vector3(-0.45, DESK_Y + 0.32, -0.08));
 
   // dossierstapel
@@ -260,6 +268,8 @@ export function createWorld(container, H) {
   for (let r = 0; r < 4; r++) for (let c = 0; c < 10; c++) { const k = cyl(0.011, 0.011, 0.01, keyMat, -0.15 + c * 0.033 + r * 0.008, DESK_Y + 0.085 + r * 0.012, 0.11 - r * 0.03, 8); tw.add(k); }
   tw.add(box(0.2, 0.012, 0.025, keyMat, 0, DESK_Y + 0.083, 0.135));
   tw.position.set(0.68, 0, -0.18); tw.rotation.y = -0.3; O.add(tw);
+  const twM = instance(M, "typemachine");
+  if (twM) { tw.clear(); twM.position.y = DESK_Y; twM.scale.setScalar(1.12); tw.add(twM); }
   tappable(tw, "typemachine", "Typemachine", new THREE.Vector3(0.68, DESK_Y + 0.42, -0.18));
 
   // fotolijst
@@ -277,9 +287,11 @@ export function createWorld(container, H) {
   tappable(photo, "gezin", "Gezin", new THREE.Vector3(-0.6, DESK_Y + 0.3, -0.6));
 
   // asbak + koffie
-  O.add(cyl(0.06, 0.05, 0.025, mat(0x6b7f86, { roughness: 0.2, metalness: 0.5 }), 0.32, DESK_Y + 0.013, 0.28, 16));
-  const cup = cyl(0.04, 0.035, 0.085, mat(0xf1ede2, { roughness: 0.3 }), -0.95, DESK_Y + 0.043, 0.1, 16); O.add(cup);
-  O.add(cyl(0.036, 0.036, 0.002, mat(0x2b1a0e), -0.95, DESK_Y + 0.08, 0.1, 16));
+  const ashM = instance(M, "asbak"), cupM = instance(M, "koffiekop");
+  if (ashM) { ashM.position.set(0.32, DESK_Y, 0.28); ashM.rotation.y = 0.6; O.add(ashM); }
+  else O.add(cyl(0.06, 0.05, 0.025, mat(0x6b7f86, { roughness: 0.2, metalness: 0.5 }), 0.32, DESK_Y + 0.013, 0.28, 16));
+  if (cupM) { cupM.position.set(-0.95, DESK_Y, 0.1); cupM.rotation.y = 2.2; O.add(cupM); }
+  else { O.add(cyl(0.04, 0.035, 0.085, mat(0xf1ede2, { roughness: 0.3 }), -0.95, DESK_Y + 0.043, 0.1, 16)); O.add(cyl(0.036, 0.036, 0.002, mat(0x2b1a0e), -0.95, DESK_Y + 0.08, 0.1, 16)); }
   // rook
   const smokeO = []; const smokeMat = new THREE.MeshBasicMaterial({ color: 0xcfcac0, transparent: true, opacity: 0.15, depthWrite: false });
   for (let i = 0; i < 10; i++) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), smokeMat.clone()); s.userData.t = i / 10; O.add(s); smokeO.push(s); }
@@ -521,14 +533,17 @@ export function createWorld(container, H) {
   // tram (Tatra) op de Dimitroffstraße-as
   const TRAM_Z = -1.5 * CELL;
   winterMats.push(strip(70, 0.06, mat(0x2a2a2a), 0, TRAM_Z - 0.32, true, 0.03)); winterMats.push(strip(70, 0.06, mat(0x2a2a2a), 0, TRAM_Z + 0.32, true, 0.03));
-  for (let x = -34; x <= 34; x += 6.5) { D.add(cyl(0.05, 0.05, 4.4, poleMat, x + 3.25, 2.2, TRAM_Z + 1.25, 6)); D.add(box(0.05, 0.05, 1.3, poleMat, x + 3.25, 4.3, TRAM_Z + 0.62)); }
-  D.add(box(70, 0.02, 0.02, mat(0x222222), 0, 4.15, TRAM_Z));
+  const WIRE_Y = 2.36; // rijdraad op de hoogte van de stroomafnemer
+  for (let x = -34; x <= 34; x += 6.5) { D.add(cyl(0.05, 0.05, WIRE_Y + 0.25, poleMat, x + 3.25, (WIRE_Y + 0.25) / 2, TRAM_Z + 1.25, 6)); D.add(box(0.05, 0.05, 1.3, poleMat, x + 3.25, WIRE_Y + 0.15, TRAM_Z + 0.62)); }
+  D.add(box(70, 0.02, 0.02, mat(0x222222), 0, WIRE_Y, TRAM_Z));
   const tram = new THREE.Group();
   const tramTex = canvasTex(128, 32, (g, w, h) => { g.fillStyle = "#e8d8a0"; g.fillRect(0, 0, w, h); g.fillStyle = "#d26a1e"; g.fillRect(0, h * 0.62, w, h * 0.38); g.fillStyle = "#2b3238"; for (let x = 4; x < w - 6; x += 15) g.fillRect(x, 5, 11, 11); }, 1);
   const tm = lam({ map: tramTex });
   [-1.75, 1.75].forEach(dx => { tram.add(box(3.4, 1.3, 0.95, [mat(0xe8d8a0), mat(0xe8d8a0), mat(0xbab6aa), mat(0xbab6aa), tm, tm], dx, 0.9, 0)); });
   tram.add(box(0.5, 0.5, 0.05, mat(0x222222), 0.5, 1.9, 0));
   tram.position.set(0, 0, TRAM_Z); D.add(tram);
+  const tramM = instance(M, "tatra_kt4d");
+  if (tramM) { tram.clear(); tramM.scale.setScalar(0.4); tram.add(tramM); }
 
   // bomen
   const treeMat = mat(0x4f5e3a), trunkMat = mat(0x4a3a2a);
@@ -564,8 +579,12 @@ export function createWorld(container, H) {
   const cars = [];
   for (let i = 0; i < 9; i++) {
     const c = new THREE.Group(); const cm = mat(carCols[i % carCols.length], { roughness: 0.5 });
-    c.add(box(1.5, 0.45, 0.75, cm, 0, 0.38, 0)); c.add(box(0.85, 0.35, 0.7, cm, -0.1, 0.78, 0)); c.add(box(0.86, 0.28, 0.72, lam({ color: 0x2a3238, roughness: 0.2 }), -0.1, 0.78, 0, false));
-    [[-0.5, 0.36], [0.5, 0.36], [-0.5, -0.36], [0.5, -0.36]].forEach(([xx, zz]) => { const w = cyl(0.17, 0.17, 0.12, mat(0x1a1a1a), xx, 0.17, zz, 10); w.rotation.x = Math.PI / 2; c.add(w); });
+    const carM = instance(M, i % 3 === 2 ? "wartburg353" : "trabant601");
+    if (carM) { carM.scale.setScalar(0.5); carM.traverse(o => { if (o.isMesh && o.material.userData.paint) o.material.color.set(carCols[i % carCols.length]); }); c.add(carM); }
+    else {
+      c.add(box(1.5, 0.45, 0.75, cm, 0, 0.38, 0)); c.add(box(0.85, 0.35, 0.7, cm, -0.1, 0.78, 0)); c.add(box(0.86, 0.28, 0.72, lam({ color: 0x2a3238, roughness: 0.2 }), -0.1, 0.78, 0, false));
+      [[-0.5, 0.36], [0.5, 0.36], [-0.5, -0.36], [0.5, -0.36]].forEach(([xx, zz]) => { const w = cyl(0.17, 0.17, 0.12, mat(0x1a1a1a), xx, 0.17, zz, 10); w.rotation.x = Math.PI / 2; c.add(w); });
+    }
     const horiz = i % 2 === 0;
     const lane = horiz ? ((i % 6) / 2 - 1 + 0.5) * CELL : ((i % 8) - 4 + 0.5) * CELL;
     c.userData = { horiz, lane: lane + (i % 4 < 2 ? 0.45 : -0.45), dir: i % 4 < 2 ? 1 : -1, pos: (i * 13) % 60 - 30, speed: 3 + (i % 3) };
@@ -577,7 +596,30 @@ export function createWorld(container, H) {
   const coatCols = [0x4a4a52, 0x5a4a3a, 0x3a4a5a, 0x6a5a4a, 0x4a5a4a, 0x7a6a5a, 0x2f2f33, 0x6a3a3a];
   const torsoGeo = new THREE.BoxGeometry(0.46, 0.55, 0.26); const headGeo = new THREE.IcosahedronGeometry(0.16, 0); const legGeo = new THREE.BoxGeometry(0.17, 0.5, 0.18); legGeo.translate(0, -0.25, 0); const armGeo = new THREE.BoxGeometry(0.12, 0.48, 0.14); armGeo.translate(0, -0.22, 0);
   const skin = mat(0xd8b89a), trouser = mat(0x2e2e34), hair = [mat(0x3a2a1c), mat(0x6a5a3a), mat(0x1c1c1c), mat(0x8a8a8a)];
-  function person(col) {
+  // Quaternius-figuren met skelet (fase 2). Zonder modellen: de oude blokjespoppetjes.
+  const FIGS = ["fig_burger", "fig_burgeres", "fig_arbeider", "fig_vrouw", "fig_burger", "fig_dominee", "fig_punk", "fig_arbeider", "fig_burgeres", "fig_vopo", "fig_vrouw", "fig_stasi"];
+  const AX = new THREE.Vector3(1, 0, 0), AZ = new THREE.Vector3(0, 0, 1);
+  function figure(name) {
+    const f = instance(M, name); if (!f) return null;
+    const rig = ["UpperLegL", "UpperLegR", "UpperArmL", "UpperArmR"].map(n => { const b = f.getObjectByName(n); return b && { b, q: b.quaternion.clone() }; });
+    if (rig.some(r => !r)) return null;
+    const p = new THREE.Group(); f.scale.setScalar(0.78); p.add(f); p.userData.rig = rig;
+    posePerson(p, 0, false);
+    return p;
+  }
+  // sw = zwaai van benen/armen; up = false (armen omlaag) of een getal (armen omhoog, juichen)
+  function posePerson(p, sw, up) {
+    const R = p.userData.rig;
+    if (R) {
+      for (let k = 0; k < 2; k++) { const r = R[k]; r.b.quaternion.copy(r.q); r.b.rotateOnAxis(AZ, sw * 0.8); }
+      for (let k = 2; k < 4; k++) { const r = R[k]; r.b.quaternion.copy(r.q); r.b.rotateOnAxis(AX, up === false ? -1.3 : 0.75 + up); if (up === false) r.b.rotateOnAxis(AZ, -sw * 0.7); }
+      return;
+    }
+    const L = p.userData.limbs; L[0].rotation.x = sw; L[1].rotation.x = -sw;
+    if (up === false) { L[2].rotation.x = -sw * 0.8; L[3].rotation.x = sw * 0.8; } else L[2].rotation.x = L[3].rotation.x = -2.6 + up;
+  }
+  function person(col, idx = 0, fig) {
+    const fp = figure(fig || FIGS[idx % FIGS.length]); if (fp) return fp;
     const p = new THREE.Group(); const cm = mat(col);
     const torso = new THREE.Mesh(torsoGeo, cm); torso.position.y = 0.82; p.add(torso);
     const head = new THREE.Mesh(headGeo, skin); head.position.y = 1.27; p.add(head);
@@ -589,7 +631,7 @@ export function createWorld(container, H) {
     return p;
   }
   for (let i = 0; i < 32; i++) {
-    const p = person(coatCols[i % coatCols.length]);
+    const p = person(coatCols[i % coatCols.length], i);
     const horiz = i % 2 === 0;
     const lane = horiz ? ((i % 6) - 3 + 0.5) * CELL : ((i % 10) - 5 + 0.5) * CELL;
     Object.assign(p.userData, { horiz, lane: lane + (i % 4 < 2 ? 1.05 : -1.05), dir: i % 3 === 0 ? -1 : 1, pos: (i * 7.3) % 60 - 30, speed: 0.6 + (i % 5) * 0.12, ph: i });
@@ -597,7 +639,7 @@ export function createWorld(container, H) {
   }
   // rij voor de Kaufhalle
   const kb = BUILDINGS.find(b => b.id === "konsum");
-  for (let i = 0; i < 7; i++) { const p = person(coatCols[(i + 3) % coatCols.length]); p.position.set(kb.x * CELL - 2.2 + i * 0.6, 0, kb.z * CELL + 2.6); p.rotation.y = -Math.PI / 2; D.add(p); }
+  for (let i = 0; i < 7; i++) { const p = person(coatCols[(i + 3) % coatCols.length], i, ["fig_vrouw", "fig_burgeres", "fig_burger", "fig_vrouw", "fig_arbeider", "fig_burgeres", "fig_vrouw"][i]); p.position.set(kb.x * CELL - 2.2 + i * 0.6, 0, kb.z * CELL + 2.6); p.rotation.y = -Math.PI / 2; D.add(p); }
 
   // fabrieksrook
   const smokeD = []; const sMatD = lam({ color: 0xb7b2a6, transparent: true, opacity: 0.35, depthWrite: false });
@@ -612,7 +654,8 @@ export function createWorld(container, H) {
 
   // finale: menigte & vuurwerk
   const crowd = new THREE.Group(); crowd.visible = false; D.add(crowd);
-  for (let i = 0; i < 90; i++) { const p = person(coatCols[i % coatCols.length]); p.position.set(-8 + Math.random() * 16, 0, WALL_Z + 1 + Math.random() * 9); p.userData.ph = Math.random() * 6; crowd.add(p); }
+  for (let i = 0; i < 90; i++) { const p = person(coatCols[i % coatCols.length], i * 7); p.position.set(-8 + Math.random() * 16, 0, WALL_Z + 1 + Math.random() * 9); p.userData.ph = Math.random() * 6; crowd.add(p); }
+  crowd.traverse(o => { if (o.isMesh) o.castShadow = false; });
   const fireworks = [];
   for (let i = 0; i < 5; i++) { const g = new THREE.BufferGeometry(); const n = 80; const arr = new Float32Array(n * 3); g.setAttribute("position", new THREE.BufferAttribute(arr, 3)); const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: [0xffd54f, 0xff4f8a, 0x4fd7ff, 0xffffff, 0x7dff6a][i], size: 0.5, transparent: true })); pts.userData = { t: Math.random() * 3, n, origin: new THREE.Vector3(-10 + i * 5, 14 + i % 3 * 3, WALL_Z + 5), dirs: Array.from({ length: n }, () => new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()) }; pts.visible = false; D.add(pts); fireworks.push(pts); }
 
@@ -693,7 +736,7 @@ export function createWorld(container, H) {
     const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
     if (mode === "office") {
       phone.position.x = basePhone.x + (ringing ? Math.sin(t * 60) * 0.006 * (Math.sin(t * 3) > 0 ? 1 : 0) : 0);
-      handset.position.y = DESK_Y + 0.14 + (ringing && Math.sin(t * 3) > 0 ? Math.abs(Math.sin(t * 30)) * 0.01 : 0);
+      handset.position.y = hsBaseY + (ringing && Math.sin(t * 3) > 0 ? Math.abs(Math.sin(t * 30)) * 0.01 : 0);
       const now = new Date(); h1.rotation.z = -(now.getMinutes() / 60) * Math.PI * 2; h2.rotation.z = -((now.getHours() % 12) / 12) * Math.PI * 2;
       smokeO.forEach(s => { s.userData.t = (s.userData.t + dt * 0.15) % 1; const k = s.userData.t; s.position.set(0.32 + Math.sin(k * 9 + t) * 0.03 * k, DESK_Y + 0.04 + k * 0.6, 0.28 + Math.cos(k * 7) * 0.02 * k); s.scale.setScalar(0.5 + k * 2.5); s.material.opacity = 0.18 * (1 - k); });
       if (caseF.visible) caseF.position.y = DESK_Y + 0.015 + Math.max(0, Math.sin(t * 4)) * 0.006;
@@ -704,13 +747,13 @@ export function createWorld(container, H) {
     } else {
       controls.update();
       cars.forEach(c => { const u = c.userData; u.pos += u.dir * u.speed * dt; if (u.pos > 34) u.pos = -34; if (u.pos < -34) u.pos = 34; if (u.horiz) { c.position.set(u.pos, 0, u.lane); c.rotation.y = u.dir > 0 ? 0 : Math.PI; } else { c.position.set(u.lane, 0, u.pos); c.rotation.y = u.dir > 0 ? -Math.PI / 2 : Math.PI / 2; } });
-      walkers.forEach(p => { const u = p.userData; u.pos += u.dir * u.speed * dt; if (u.pos > 30) u.pos = -30; if (u.pos < -30) u.pos = 30; if (u.horiz) { p.position.set(u.pos, 0, u.lane); p.rotation.y = u.dir > 0 ? Math.PI / 2 : -Math.PI / 2; } else { p.position.set(u.lane, 0, u.pos); p.rotation.y = u.dir > 0 ? 0 : Math.PI; } const sw = Math.sin(t * 7 * u.speed + u.ph) * 0.6; const L = p.userData.limbs; L[0].rotation.x = sw; L[1].rotation.x = -sw; L[2].rotation.x = -sw * 0.8; L[3].rotation.x = sw * 0.8; });
+      walkers.forEach(p => { const u = p.userData; u.pos += u.dir * u.speed * dt; if (u.pos > 30) u.pos = -30; if (u.pos < -30) u.pos = 30; if (u.horiz) { p.position.set(u.pos, 0, u.lane); p.rotation.y = u.dir > 0 ? Math.PI / 2 : -Math.PI / 2; } else { p.position.set(u.lane, 0, u.pos); p.rotation.y = u.dir > 0 ? 0 : Math.PI; } posePerson(p, Math.sin(t * 7 * u.speed + u.ph) * 0.6, false); });
       smokeD.forEach(s => { const u = s.userData; u.t = (u.t + dt * 0.08) % 1; const k = u.big ? 1 : 0.5; s.position.set(u.c.x + u.t * 6 * k, u.c.y + u.t * 7 * k, u.c.z - u.t * 2 * k + Math.sin(u.t * 10) * 0.4); s.scale.setScalar((0.6 + u.t * 3) * k); s.material.opacity = 0.3 * (1 - u.t); });
       BUILDINGS.forEach(b => { const g = bGroups[b.id]; if (g.userData.bug.visible) { g.userData.bug.rotation.y += dt * 2; g.userData.bug.scale.setScalar(1 + Math.sin(t * 5) * 0.15); } if (g.userData.ring.visible) g.userData.ring.material.opacity = 0.55 + Math.sin(t * 4) * 0.3; });
       tram.position.x = ((t * 2.2) % 80) - 40; flags.forEach((f, i) => { f.rotation.y = Math.sin(t * 2 + i) * 0.25; });
       if (snow.visible) { const a = snow.geometry.attributes.position; for (let i = 0; i < snowN; i++) { a.array[i * 3 + 1] -= dt * 3; a.array[i * 3] += Math.sin(t + i) * dt * 0.3; if (a.array[i * 3 + 1] < 0) a.array[i * 3 + 1] = 40; } a.needsUpdate = true; }
       if (finale) {
-        crowd.children.forEach(p => { p.position.y = Math.abs(Math.sin(t * 5 + p.userData.ph)) * 0.3; const L = p.userData.limbs; L[2].rotation.x = L[3].rotation.x = -2.6 + Math.sin(t * 6 + p.userData.ph) * 0.4; });
+        crowd.children.forEach(p => { p.position.y = Math.abs(Math.sin(t * 5 + p.userData.ph)) * 0.3; posePerson(p, 0, Math.sin(t * 6 + p.userData.ph) * 0.4); });
         fireworks.forEach(f => { const u = f.userData; u.t += dt; const k = u.t % 3; const a = f.geometry.attributes.position; for (let i = 0; i < u.n; i++) { const d = u.dirs[i]; a.array[i * 3] = u.origin.x + d.x * k * 4; a.array[i * 3 + 1] = u.origin.y + d.y * k * 4 - k * k * 0.6; a.array[i * 3 + 2] = u.origin.z + d.z * k * 4; } a.needsUpdate = true; f.material.opacity = Math.max(0, 1 - k / 2.2); });
       }
       draw(D, dCam);

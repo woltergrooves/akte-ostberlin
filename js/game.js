@@ -2,6 +2,7 @@
 import { TURNS, RANKS, BUILDINGS, WORKPLACES, TYPEWRITERS, TRAITS, FAKEABLE, generatePeople, INCIDENTS, OVERHEARD } from "./data.js";
 import { STORY, CONDITIONAL } from "./events.js";
 import { createWorld } from "./world.js";
+import { loadModels } from "./assets.js";
 
 const SAVE = "akte-save-v3", ENDS = "akte-endings-v2";
 const QUOTA = { 1985: { res: 2, ims: 1 }, 1986: { res: 3, ims: 2 }, 1987: { res: 3, ims: 3 }, 1988: { res: 4, ims: 3 }, 1989: { res: 4, ims: 3 } };
@@ -769,7 +770,11 @@ function personAdvice(p) {
 }
 
 // ===================== START =====================
-function boot() {
+async function boot() {
+  // laadscherm: modellen ophalen (fase 2)
+  const ld = $("#loader"), bar = $("#loader .lbar i"), pct = $("#loader .lpct");
+  const models = await loadModels(f => { const p = Math.round(f * 100); bar.style.width = p + "%"; pct.textContent = String(p).padStart(3, "0") + " %"; });
+  ld.classList.add("done"); setTimeout(() => ld.remove(), 450);
   world = createWorld($("#stage"), {
     onOffice: k => {
       if (!S || S.over) return;
@@ -783,7 +788,7 @@ function boot() {
       if (k === "typemachine") return confirmEnd();
     },
     onBuilding: id => { if (S && !S.over) openBuilding(id); },
-  });
+  }, models);
   $("#sheetClose").onclick = closeSheet; $("#sheetBack").onclick = back;
   $("#modal").onclick = e => { if (e.target.id === "modal" && !$("#modal").dataset.lock) closeModal(); };
   $("#navOffice").onclick = () => { closeSheet(); setMode("office"); };
