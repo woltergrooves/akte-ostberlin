@@ -85,14 +85,31 @@ De belangrijkste blokjes zijn vervangen door echte low-poly modellen. Lukt het l
 
   Gecontroleerd (17 nov 2026): Schwerter zu Pflugscharen in Wittenberg, 24-9-1983 (evangelisch.de) · arrestatie Bohley en Poppe, 12-12-1983, zes weken vast (jugendopposition.de, dissidenten.eu) · uitreisgolf 1984, ±40.000 (germanhistorydocs.org) · Ständige Vertretung gesloten 27-6 t/m 31-7-1984 (bpb.de) · Gorbatsjov gekozen 11-3-1985 (bpb.de) · Tsjernobyl 26-4-1986, ND drukt TASS-melding (bpb.de, freitag.de) · Umwelt-Bibliothek geopend 2-9-1986 (germanhistorydocs.org) · Concert for Berlin 6–8-6-1987 (museum-digital.de) · Honecker in de BRD 7–11-9-1987, Olof-Palme-mars 1–18-9 (bundesarchiv.de) · skinheads in de Zionskirche 17-10-1987, ±30 man (stasi-mediathek.de) · Aktion „Falle“ 24/25-11-1987 (stasi-mediathek.de) · Liebknecht-Luxemburg-demo 17-1-1988 (bundesarchiv.de) · Springsteen Weißensee 19-7-1988, 160.000 kaarten (l-iz.de) · Sputnik geschrapt 18/19-11-1988 (stasi-mediathek.de) · Chris Gueffroy 5-2-1989, rouwadvertentie 21-2 (chronik-der-mauer.de) · verkiezingen 7-5-1989, 98,85% (bundestag.de) · Hongaarse grens: afbraak vanaf 2-5, picknick 19-8, open 11-9-1989 · Neues Forum 9/10-9-1989 (bpb.de) · Alexanderplatz 4-11-1989, ADN-gebouw, live op tv (dhm.de, germanhistorydocs.org) · Bornholmer Straße open ±23.30 uur, 9-11-1989
 
-**DDR-sfeer**
-- [ ] Radio, *Aktuelle Kamera*, krantenkoppen van *Neues Deutschland*, feestdagen op de kalender
-- [ ] Rijen voor Bückware, Westpakete, Intershop, Subbotnik, FDJ, kolenkachelrook, leuzen per jaar
+**DDR-sfeer (3C, 17 nov)**
+- [x] Nieuws per beurt (`NEWS` in `data.js`): *Neues Deutschland*, *Aktuelle Kamera*, RIAS/ARD. In de briefing, op de krant op het bureau en op de radio (RFT op de kast, aan/uit met ruis)
+- [x] Feestdagen per maand (`HOLIDAYS`) in briefing en krant; spandoek met leuze per jaar (`SLOGANS`)
+- [x] Wijk: kolenkachelrook uit alle Altbau-schoorstenen in de winter, rij voor de Kaufhalle (lang bij Bückware), Intershop-paviljoen, Subbotnik in maart/april, FDJ-blauwhemden en extra vlaggen op 1 mei en 7 oktober, pioniers in juni
+- [x] **Handboek** (boek op het bureau, ?-knop, briefing, titelscherm): *Allowed or not?* (wat mocht wel/niet, met wetsartikelen §106, §213, §215, §219, §220, §249) en *Chronicle* (achtergrond per beurt, alleen tot de huidige beurt). `js/lexicon.js`
 
-**Interactieve wereld**
-- [ ] Tik op voorbijgangers: wie is het, kort gesprek of observatie
-- [ ] Gebouwen in: trappenhuis, woning, Kneipe, Kaufhalle, Konspirative Wohnung, telefooncel
-- [ ] Voorwerpen die iets doen (radio, krant, lades)
+  Nieuws gecontroleerd (17 nov 2026): SM-70 weg eind 1984 (bpb.de, chronik-der-mauer.de) · Tiedge 19-8-1985 (bpb.de) · Honecker in Polen dec. 1985 (SED-documenten 1985) · Vijfjarenplan 27-11-1986, 1.064.000 woningen (GBl. DDR I nr. 36/1986) · kerkpers 1988 meest gecensureerd (communicatio-socialis.de) · Honecker–Leich 3-3-1988, ND ingekort (gospelstudies/RCL) · Ossietzky-school 30-9-1988 (stasi-mediathek.de) · overige uit algemene kronieken (Karl-Marx-/Lutherjaar 1983, Strauß-krediet 29-6-1983, KAL 007 1-9-1983, Pershing 22-11-1983, Olympische boycot 10-5-1984, Honecker-bezoek afgezegd 4-9-1984, Nicholson 24-3-1985, Glienicker Brücke 11-6-1985, cultuurakkoord 6-5-1986, 750 jaar Berlijn, Reagan 12-6-1987, amnestie en afschaffing doodstraf juli 1987, Gorbatsjov 2-11-1987, Lenné-driehoek 1-7-1988, Honecker ‘50 en 100 jaar’ jan. 1989, Tiananmen-steun Volkskammer 8-6-1989, Fackelzug 6-10-1989, Praagse treinen, Honecker af 18-10-1989, Schabowski 9-11-1989)
+
+**Interactieve wereld (3D, 17 nov)**
+- [x] Tik op voorbijgangers: 32 lopers gekoppeld aan bewoners (`assignWalkers`), kaartje met praatje (roddel, onbevestigd), West-koffie (ware roddel), volgen (= observeren), dossier
+- [x] Binnenruimtes als kleine 3D-scènes (`js/interiors.js`): trappenhuis (brievenbussen, Hausbuch, verdeelkast = microfoons), eigen flat, Café Mosaik (tafels afluisteren, barman, dode brievenbus), Kaufhalle (rij, Bückware), Konspirative Wohnung „Linde“ (Treffs), telefooncel (anoniem waarschuwen), litfaßzuil (affiches per jaar met uitleg, getypt briefje = extra aanwijzing)
+- [x] Kantoor: radio, krant, geldkistje (inventaris, eigen dossier, onderscheidingen), prikbord, handboek. Labels ontwarren zichzelf
+
+**Ideeën (17 nov, uit `claude/akte-ideeen.md`)**
+- [x] Cliffhanger aan het eind van elke beurt (`teaser()`, eigen `tease` per scène, "Zugriff 05:00" na een arrestatie)
+- [x] Prikbord met draden: verborgen verbanden per run (`makeLinks`), 2–4 geheimen per bewoner, percentage per dossier, stempel VOLLSTÄNDIG (+2 gunst)
+- [x] Uitgestelde gevolgen: 9 scènes op vlaggen van eerder (Brandt, Anna, Herta, Lena, Kühn, het lek, Micha op de Alex, anonieme waarschuwing)
+- [x] Informanten met loyaliteit, angst en behoefte; loyaliteit zakt zonder Treff; betalen, onder druk zetten, kruiscontrole op leugens; dubbelagenten
+- [x] Fuchs: microfoons in je eigen flat zoeken (weghalen of laten zitten); eigen dossier groeit mee (`ownLog`)
+- [x] Gezin raakt betrokken: Jens bij het concert, Katrins handtekening, drie jaar NVA
+- [x] Run-seed, archief met 8 documenten (één per einde), onderscheidingen over runs heen, startvoorwaarden (Strenger Kessler, Kurze Leine, Alter Hase)
+- [x] Daily Akte: dagelijkse puzzel, voor iedereen gelijk, deelbaar als telexstrook (`js/daily.js`)
+- [x] Geluid (WebAudio, `js/audio.js`): stempel, telex, typemachine, telefoonbel, radio; trillen; LED's knipperen bij verandering. Uit te zetten in Help
+- [x] Promotieceremonie met schouderstukken; minigames brief openstomen, bandrecorder, doka (`js/minigames.js`) als Überstunden (+1 MP), bij postcontrole en in de KW
+- [x] November 1989: kies welke dossiers je vernietigt; bepaalt de epiloog en je eigen dossier in 1992
 
 **RPG**
 - [ ] Ervaringspunten en vaardigheden (Observatie, Verhoor, Overtuigen, Techniek, Geheimhouding)

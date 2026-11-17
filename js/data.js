@@ -41,6 +41,105 @@ export const TURNS = [
 ];
 export const turnIndex = key => TURNS.findIndex(t => t.key === key);
 
+// ---------- Nieuws per beurt (fase 3C) ----------
+// Alleen controleerbare feiten, als omschrijving (geen verzonnen letterlijke koppen). Bronnen: ROADMAP.md, fase 3C.
+// src: wie het brengt. ND = Neues Deutschland, AK = Aktuelle Kamera (DDR-tv, 19.30 uur), RIAS/ARD = westelijke zenders.
+export const NEWS = {
+  "1983-mrt": [["ND", "The Karl Marx Year: 14 March marks a hundred years since Marx's death. Ceremonies on every front page."], ["RIAS", "1983 is also a Luther year in the GDR: 500 years since his birth, and the state is taking part."]],
+  "1983-jun": [["RIAS", "Bonn guarantees a loan of one billion Deutschmarks to the GDR (29 June), brokered by Franz Josef Strauß."]],
+  "1983-sep": [["ND", "The TASS version: a Soviet fighter stopped an ‘intruder’ over Sakhalin (1 September). Western radio: a Korean airliner, 269 dead."]],
+  "1983-dec": [["ARD", "The Bundestag votes to station US Pershing II missiles in West Germany (22 November)."], ["AK", "Aktuelle Kamera reports Soviet countermeasures: new missiles on GDR soil."]],
+  "1984-mrt": [["RIAS", "Since January the GDR has been letting exit applicants go by the thousand. By the end of the year it will be around 40,000."], ["ND", "Front page: the Leipzig Spring Fair."]],
+  "1984-jun": [["ND", "Following Moscow's lead, the GDR is staying away from the Los Angeles Olympics (announced 10 May)."], ["ARD", "East Germans refuse to leave Bonn's Permanent Mission. It closes to visitors (27 June)."]],
+  "1984-sep": [["RIAS", "Honecker's planned visit to West Germany has been called off (4 September)."]],
+  "1984-dec": [["RIAS", "On the inner German border the last SM-70 automatic firing devices are taken down before the end of the year."]],
+  "1985-mrt": [["AK", "Konstantin Chernenko is dead. Mikhail Gorbachev is the new General Secretary in Moscow (11 March)."], ["RIAS", "A US liaison officer, Major Arthur Nicholson, is shot dead by a Soviet sentry near Ludwigslust (24 March)."]],
+  "1985-jun": [["ARD", "On the Glienicke Bridge, 23 prisoners of the East are exchanged for four agents held in the West (11 June)."]],
+  "1985-sep": [["RIAS", "Hansjoachim Tiedge, a group leader in West German counter-espionage in Cologne, has defected to the GDR (19 August)."]],
+  "1985-dec": [["ND", "Honecker back from a friendship visit to Poland (mid-December)."]],
+  "1986-mrt": [["ND", "Preparations for the XI Party Congress of the SED, 17–21 April. Every factory reports its pledges."]],
+  "1986-mei": [["ND", "A short TASS report: an accident at the Chernobyl power station (26 April)."], ["ND", "Bonn and East Berlin sign a cultural agreement (6 May)."]],
+  "1986-sep": [["AK", "Factory militia parade for the 25th anniversary of the Wall, 13 August."]],
+  "1986-dec": [["ND", "The Volkskammer passes the Five-Year Plan 1986–1990: more than a million flats to be built or modernised (27 November)."]],
+  "1987-mrt": [["ND", "Berlin is 750 years old. Celebrations all year, in both halves of the city."]],
+  "1987-jun": [["RIAS", "At the Brandenburg Gate, US President Reagan calls on Gorbachev to tear down this wall (12 June)."]],
+  "1987-sep": [["AK", "Honecker in Bonn: a red carpet, both German flags, both anthems (7 September)."]],
+  "1987-okt": [["ND", "The amnesty for the 38th anniversary is releasing thousands of prisoners. The death penalty was abolished in July."]],
+  "1987-nov": [["RIAS", "In Moscow, Gorbachev calls Stalin's crimes ‘unpardonable’ on the eve of the 70th anniversary of the revolution (2 November)."]],
+  "1988-jan": [["AK", "Preparations for the annual Liebknecht–Luxemburg march on Sunday 17 January."]],
+  "1988-apr": [["RIAS", "The church press is being censored as never before: issue after issue of the Protestant weeklies is held back."], ["ND", "After Honecker's talks with Bishop Leich on 3 March, ND printed only a shortened version of the bishop's speech."]],
+  "1988-jul": [["ND", "Border adjustment in Berlin: the Lenné triangle passes to West Berlin (1 July)."]],
+  "1988-nov": [["ND", "Sputnik, the Soviet digest, has been ‘removed from the postal list’ (19 November)."], ["RIAS", "Four pupils of the Carl von Ossietzky school in Pankow were expelled on 30 September over a wall newspaper."]],
+  "1989-feb": [["AK", "Honecker in January: the Wall will still be standing in 50 and even in 100 years."]],
+  "1989-mei": [["ARD", "Hungary begins dismantling the fence on its border with Austria (2 May)."], ["ND", "Local elections on Sunday 7 May."]],
+  "1989-aug": [["ND", "The Volkskammer approved Beijing's crackdown on Tiananmen Square (8 June)."], ["RIAS", "Hundreds of East Germans walk into Austria at a ‘Pan-European picnic’ near Sopron (19 August)."]],
+  "1989-sep": [["RIAS", "Hungary opens its border to GDR citizens (11 September). Thousands are driving west."]],
+  "1989-okt": [["ND", "Forty years of the GDR: FDJ torchlight parade on Unter den Linden (6 October)."], ["ARD", "Special trains take the refugees from the Prague embassy across the GDR to the West (1 and 4 October)."]],
+  "1989-nov4": [["AK", "Honecker has resigned (18 October). Egon Krenz is the new General Secretary."]],
+  "1989-nov": [["AK", "Live, just before 19:00: Günter Schabowski reads out new travel rules. ‘Immediately, without delay.’"]],
+};
+export const NEWS_SRC = { ND: "Neues Deutschland", AK: "Aktuelle Kamera", RIAS: "RIAS (West Berlin radio)", ARD: "ARD (West German TV)", DT64: "DT64" };
+TURNS.forEach(t => { t.news = NEWS[t.key] || []; });
+
+// Feestdagen en vaste data per maand (DDR). Op de kalender en in de briefing.
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+export const monthOf = T => MONTHS.findIndex(m => T.label.includes(m)) + 1;
+export const HOLIDAYS = {
+  1: "Second Sunday: march to the graves of Liebknecht and Luxemburg",
+  3: "8 March: International Women's Day · Leipzig Spring Fair",
+  5: "1 May: Day of the Workers, parade · 8 May: Day of Liberation",
+  6: "1 June: International Children's Day",
+  8: "13 August: anniversary of the ‘Antifascist Protection Wall’",
+  9: "1 September: World Peace Day · second Sunday: Victims of Fascism",
+  10: "7 October: Day of the Republic",
+  11: "7 November: anniversary of the October Revolution",
+  12: "Christmas. Westpakete in every stairwell",
+};
+// Spandoek op de Plattenbau, per jaar
+export const SLOGANS = { 1983: ["KARL-MARX-", "JAHR", "1983"], 1984: ["35 JAHRE", "DDR"], 1985: ["40. JAHRES-", "TAG DER", "BEFREIUNG"], 1986: ["XI.", "PARTEITAG", "DER SED"], 1987: ["750", "JAHRE", "BERLIN"], 1988: ["ALLES", "ZUM WOHLE", "DES", "VOLKES"], 1989: ["40", "JAHRE", "DDR"] };
+
+// ---------- Verbanden tussen bewoners (prikbord) ----------
+// Elk verband hoort bij een kenmerk: ontdek je het kenmerk, dan kan het verband (draad) zichtbaar worden.
+export const LINKS = {
+  affaire: { l: "affair with", col: "#c42a1f" },
+  schulden: { l: "owes money to", col: "#8a5a00" },
+  zwart: { l: "swaps West marks with", col: "#2f6a1c" },
+  samizdat: { l: "passes banned books to", col: "#1f4f86" },
+  milieu: { l: "in the same environmental group as", col: "#3f7a2a" },
+  kerk: { l: "in Pastor Kühn's circle with", col: "#6a3a8a" },
+  punk: { l: "plays in a band with", col: "#222" },
+  westfam: { l: "shares Westpakete with", col: "#9a6a00" },
+};
+export function makeLinks(people, seed) {
+  const r = makeRng(seed + 7), pick = a => a[Math.floor(r() * a.length)];
+  const out = [], has = (a, b, k) => out.some(l => l.k === k && ((l.a === a && l.b === b) || (l.a === b && l.b === a)));
+  const add = (a, b, k) => { if (a && b && a !== b && !has(a.id, b.id, k)) out.push({ a: a.id, b: b.id, k, found: false, roll: {} }); };
+  const adults = people.filter(p => !p.secretIM && p.id !== "thomas");
+  people.forEach(p => {
+    if (p.secretIM || p.family) return;
+    if (p.traits.includes("affaire") && !out.some(l => l.k === "affaire" && (l.a === p.id || l.b === p.id))) {
+      const q = pick(adults.filter(q => q !== p && q.sex !== p.sex && Math.abs(q.age - p.age) < 18 && !out.some(l => l.k === "affaire" && (l.a === q.id || l.b === q.id))));
+      if (q) { if (!q.traits.includes("affaire")) q.traits.push("affaire"); add(p, q, "affaire"); }
+    }
+    if (p.traits.includes("schulden")) add(p, pick(adults.filter(q => q !== p && (q.traits.includes("zwart") || q.traits.includes("westfam")))) || pick(adults.filter(q => q !== p)), "schulden");
+    if (p.traits.includes("zwart")) add(p, pick(adults.filter(q => q !== p && q.traits.includes("westfam"))), "zwart");
+    ["samizdat", "milieu", "punk"].forEach(k => { if (p.traits.includes(k)) add(p, pick(adults.filter(q => q !== p && q.traits.includes(k))), k); });
+    if (p.traits.includes("kerk") && p.id !== "kuehn") add(p, people.find(q => q.id === "kuehn"), "kerk");
+  });
+  // vaste verbanden tussen verhaalpersonages
+  const S = id => people.find(p => p.id === id);
+  add(S("jutta"), S("kuehn"), "milieu");
+  return out;
+}
+// Wat informanten nodig hebben (fase 3, ideeën)
+export const NEEDS = {
+  dm: "Westgeld for a holiday on the Black Sea",
+  kaffee: "real coffee: Jacobs, from the West",
+  flat: "a bigger flat, the waiting list is eleven years",
+  study: "a university place for a son or daughter",
+  silence: "your silence about something in their past",
+};
+
 export const RANKS = [
   { id: "Leutnant", mk: 3, ims: 3, bugs: 1 },
   { id: "Oberleutnant", mk: 4, ims: 4, bugs: 2 },
@@ -151,7 +250,7 @@ export function generatePeople(seed) {
     usedNames.add(fn + ln);
     const work = pick(works);
     const traits = new Set();
-    const n = 1 + Math.floor(r() * 3);
+    const n = 2 + Math.floor(r() * 2);   // 2–3 geheimen per bewoner (plus verbanden)
     while (traits.size < n) traits.add(pick(extraTraits));
     if (traits.has("loyaal")) ["samizdat", "milieu", "vlucht", "punk"].forEach(t => traits.delete(t));
     if (r() < 0.38) traits.add(pick(TYPEWRITERS).id);

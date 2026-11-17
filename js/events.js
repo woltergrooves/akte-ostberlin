@@ -1,5 +1,6 @@
 // ===================== STORY: fixed and conditional events (English) =====================
 import { TURNS } from "./data.js";
+const free = q => q.status === "vrij" || q.status === "zersetzt";
 // e: g=favour c=conscience o=unrest d=own file (suspicion) fam=family fu=rivalry Fuchs res=results mk=manpower next turn (negative = less)
 
 export const STORY = {
@@ -13,9 +14,9 @@ export const STORY = {
     id: "brandt", via: "dossier", person: "brandt", title: "The grumbling mechanic", who: "Dieter Brandt, 34, car mechanic — VEB Bergmann-Borsig",
     src: "IM „Rose“", text: "Brandt tells jokes about the General Secretary in the canteen. Listens to RIAS in the evenings. Said: ‘In ten years none of this will be left.’ Otherwise: good at his job, popular with colleagues.",
     choices: [
-      { t: "File it away", d: "Jokes are not a crime.", e: { g: -4, c: 2 }, r: "You put the report at the bottom of the pile. Kessler frowns when he sees the empty column.", fate: ["brandt", "Read his file in 1992: three pages, then nothing. ‘Someone let me go,’ he said."] },
-      { t: "Warning interview", d: "Give him a fright. Small, effective.", e: { g: 3, c: -4, o: -1 }, fx: (S, A) => { A.p("brandt").dis -= 10; A.p("brandt").fear += 30; }, r: "Two men in leather coats wait for Brandt at the factory gate. He stops telling jokes.", fate: ["brandt", "Stayed a mechanic. Only told his children about the ‘conversation’ after 1990. Slept badly for years."] },
-      { t: "Open an operational case", d: "Full surveillance. Phone, post, colleagues.", e: { g: 8, c: -9, res: 1 }, fx: (S, A) => { A.pages("brandt", 40); A.know("brandt", "drank"); A.know("brandt", "rias"); }, r: "A new file: OV „Schraube“. Kessler nods his approval.", fate: ["brandt", "Lost his job in 1985 for no stated reason. In 1992 he found his best friend's name in his file, as an informer."] },
+      { t: "File it away", d: "Jokes are not a crime.", e: { g: -4, c: 2 }, flag: "brandtSpared", r: "You put the report at the bottom of the pile. Kessler frowns when he sees the empty column.", fate: ["brandt", "Read his file in 1992: three pages, then nothing. ‘Someone let me go,’ he said."] },
+      { t: "Warning interview", d: "Give him a fright. Small, effective.", e: { g: 3, c: -4, o: -1 }, flag: "brandtWarned", fx: (S, A) => { A.p("brandt").dis -= 10; A.p("brandt").fear += 30; }, r: "Two men in leather coats wait for Brandt at the factory gate. He stops telling jokes.", fate: ["brandt", "Stayed a mechanic. Only told his children about the ‘conversation’ after 1990. Slept badly for years."] },
+      { t: "Open an operational case", d: "Full surveillance. Phone, post, colleagues.", e: { g: 8, c: -9, res: 1 }, flag: "brandtOV", fx: (S, A) => { A.pages("brandt", 40); A.know("brandt", "drank"); A.know("brandt", "rias"); }, r: "A new file: OV „Schraube“. Kessler nods his approval.", fate: ["brandt", "Lost his job in 1985 for no stated reason. In 1992 he found his best friend's name in his file, as an informer."] },
     ]
   }],
   "1983-sep": [{
@@ -28,7 +29,7 @@ export const STORY = {
     ]
   }],
   "1983-dec": [{
-    id: "frauen", via: "telefoon", person: "jutta", title: "Frauen für den Frieden", who: "Major Kessler",
+    id: "frauen", tease: "Kessler at the door, coat already on: ‘First thing tomorrow, Leutnant. It's about women. And peace.’", via: "telefoon", person: "jutta", title: "Frauen für den Frieden", who: "Major Kessler",
     text: "‘Bohley and Poppe of the group Frauen für den Frieden were arrested today. Contacts with Western peace activists. Someone in your district mixes with those women: Jutta Lang, architect, Kollwitzstraße. I want to know what she is doing.’",
     choices: [
       { t: "Have Lang followed", d: "Three weeks, day and night.", e: { g: 5, c: -4 }, fx: (S, A) => { A.pages("jutta", 15); A.know("jutta", "samizdat"); }, r: "Lang goes to work, to a church in Friedrichshain and home. And she types. Every evening, until late." },
@@ -38,12 +39,12 @@ export const STORY = {
   }],
   // ---------------- 1984 ----------------
   "1984-mrt": [{
-    id: "anna", via: "dossier", person: "anna", title: "A ticket to Hamburg", who: "Anna Weiss, 22, medical student",
+    id: "anna", tease: "The passport office phones just before five: ‘We have an application here from your district. A medical student.’", via: "dossier", person: "anna", title: "A ticket to Hamburg", who: "Anna Weiss, 22, medical student",
     src: "Passport office", text: "Weiss has filed an Ausreiseantrag, an application to leave. Her fiancé lives in Hamburg. Since January the authorities have suddenly been letting thousands of applicants go, day after day; everyone in the district knows. Excellent grades. No known political activity.",
     choices: [
-      { t: "Pass the application on", d: "Let the system take its course.", e: { g: -5, c: 5 }, fx: (S, A) => { A.later(9, "anna-leave"); }, r: "Your stamp is on it. In a year or two she might be allowed to go.", fate: ["anna", "Left for Hamburg in 1986. Became a paediatrician."] },
+      { t: "Pass the application on", d: "Let the system take its course.", e: { g: -5, c: 5 }, flag: "annaPassed", fx: (S, A) => { A.later(9, "anna-leave"); }, r: "Your stamp is on it. In a year or two she might be allowed to go.", fate: ["anna", "Left for Hamburg in 1986. Became a paediatrician."] },
       { t: "Have her place withdrawn", d: "Applicants don't deserve privileges.", e: { g: 6, c: -10, o: 1 }, fx: (S, A) => { A.p("anna").job = "laundry worker"; A.pages("anna", 20); }, r: "The university strikes her off. She now works in a laundry.", fate: ["anna", "Was only allowed to leave in 1989. Started her studies again at 28."] },
-      { t: "Recruit her as IM „Möwe“", d: "A faster exit... if she reports on fellow students.", e: { g: 7, c: -12 }, fx: (S, A) => { A.makeIM("anna", "Möwe"); }, r: "She cries in the interview room, and signs.", fate: ["anna", "Reported on friends for four years. Left in 1988. Could not bear to see her own codename in other people's files."] },
+      { t: "Recruit her as IM „Möwe“", d: "A faster exit... if she reports on fellow students.", e: { g: 7, c: -12 }, flag: "annaIM", fx: (S, A) => { A.makeIM("anna", "Möwe"); }, r: "She cries in the interview room, and signs.", fate: ["anna", "Reported on friends for four years. Left in 1988. Could not bear to see her own codename in other people's files."] },
     ]
   }],
   "1984-jun": [{
@@ -51,7 +52,7 @@ export const STORY = {
     text: "‘East Germans are sitting in Bonn's Permanent Mission on Hannoversche Straße, trying to force their way out. Bonn has closed the building to visitors. One of them is the brother-in-law of Herta Schulz, the caretaker in Greifswalder Straße. A loyal woman. Her son wants to go to university.’",
     choices: [
       { t: "Have Herta phone him", d: "She asks her brother-in-law to come out.", e: { g: 5, c: -6 }, fx: (S, A) => { A.p("herta").fear += 15; A.log("herta", "Had to phone her brother-in-law in the Permanent Mission (June 1984)"); }, r: "Herta phones, in tears. Her brother-in-law does not come out. But she phoned, and that goes in her file, in the column marked ‘reliable’." },
-      { t: "Recruit her as IM „Besen“", d: "Her son gets his place. If she cooperates.", e: { g: 7, c: -9 }, fx: (S, A) => { A.makeIM("herta", "Besen"); }, r: "Herta signs without reading. ‘As long as my boy can study.’", fate: ["herta", "Was IM „Besen“ for five years. Her son became a doctor. She never told him why it was so easy."] },
+      { t: "Recruit her as IM „Besen“", d: "Her son gets his place. If she cooperates.", e: { g: 7, c: -9 }, flag: "hertaIM", fx: (S, A) => { A.makeIM("herta", "Besen"); }, r: "Herta signs without reading. ‘As long as my boy can study.’", fate: ["herta", "Was IM „Besen“ for five years. Her son became a doctor. She never told him why it was so easy."] },
       { t: "Leave Herta out of it", d: "It's not her doing.", e: { g: -3, c: 3 }, r: "The Mission only reopens at the end of July. You never hear what became of the brother-in-law. Herta sweeps the stairwell, as always." },
     ]
   }],
@@ -61,7 +62,7 @@ export const STORY = {
     choices: [
       { t: "Let it be", d: "It's a church. Too sensitive.", e: { g: -8, c: 3, o: 3, d: 4 }, r: "‘Let it be?’ Kessler gives you a long look. ‘We'll talk about this again, comrade.’", fate: ["kuehn", "In 1986 his cellar became the Umwelt-Bibliothek, a meeting place for the whole opposition."] },
       { t: "Infiltrate an IM", d: "One of ours in the group. (+1 IM)", e: { g: 7, c: -5 }, fx: (S, A) => A.spawnIM("Orgel-2", "kerk"), r: "A young volunteer turns up in the cellar. He is yours.", fate: ["kuehn", "Discovered in 1992 that his most loyal volunteer worked for the Stasi. They never spoke again."] },
-      { t: "Zersetzung", d: "Rumours of an affair. Letters to his wife.", e: { g: 11, c: -16, res: 1 }, fx: (S, A) => { A.p("kuehn").dis -= 20; A.pages("kuehn", 60); A.log("kuehn", "Zersetzung: anonymous letters"); }, r: "Anonymous letters reach the rectory. His marriage starts to crack. Nobody knows where it is coming from.", fate: ["kuehn", "His marriage did not survive. Only in 1992 did he read that the letters were written by the Ministry."] },
+      { t: "Zersetzung", d: "Rumours of an affair. Letters to his wife.", e: { g: 11, c: -16, res: 1 }, flag: "kuehnZers", fx: (S, A) => { A.p("kuehn").dis -= 20; A.pages("kuehn", 60); A.log("kuehn", "Zersetzung: anonymous letters"); }, r: "Anonymous letters reach the rectory. His marriage starts to crack. Nobody knows where it is coming from.", fate: ["kuehn", "His marriage did not survive. Only in 1992 did he read that the letters were written by the Ministry."] },
     ]
   }],
   // ---------------- 1985 ----------------
@@ -77,13 +78,13 @@ export const STORY = {
     id: "lena", via: "dossier", person: "lena", title: "A letter to the West", who: "Lena Vogt, 41, nurse — Poliklinik",
     src: "Postal control, Abteilung M", text: "Intercepted letter to her sister in Cologne: ‘We have no insulin left on the ward. The doctors are ashamed.’ Letter confiscated.",
     choices: [
-      { t: "Let the letter go through", d: "She is only telling the truth.", e: { g: -6, c: 7, d: 5 }, r: "A week later the letter is in Cologne. Nobody notices, you think.", fate: ["lena", "Her sister sent medicine in parcels for years. Some of them arrived."] },
+      { t: "Let the letter go through", d: "She is only telling the truth.", e: { g: -6, c: 7, d: 5 }, flag: "lenaLet", r: "A week later the letter is in Cologne. Nobody notices, you think.", fate: ["lena", "Her sister sent medicine in parcels for years. Some of them arrived."] },
       { t: "Destroy the letter, nothing more", d: "Problem solved.", e: { g: 2, c: -2 }, r: "The letter disappears. Lena wonders why her sister never writes back.", fate: ["lena", "Thought for years that her sister was ignoring her."] },
       { t: "Disciplinary proceedings", d: "‘Spreading slander against the state.’", e: { g: 8, c: -12, res: 1 }, fx: (S, A) => { A.pages("lena", 45); A.p("lena").job = "night nurse, old people's home"; }, r: "Lena is transferred to night shifts in an old people's home outside the city.", fate: ["lena", "Returned to the Poliklinik in 1991. Her file ran to 89 pages."] },
     ]
   }],
   "1985-sep": [{
-    id: "thomas", via: "dossier", person: "thomas", title: "A name you know", who: "Thomas — your brother, engineer at VEB Bergmann-Borsig",
+    id: "thomas", tease: "IM „Kranich“ asks for an urgent Treff. ‘It's about someone you know.’", via: "dossier", person: "thomas", title: "A name you know", who: "Thomas — your brother, engineer at VEB Bergmann-Borsig",
     src: "IM „Kranich“", text: "Engineer T. spoke at lunch about ‘those old men in the Politbüro’ and said he has ‘had enough’. Requesting further instructions.", note: "You read it twice. It's your brother.",
     choices: [
       { t: "Make the report disappear", d: "Nobody needs to know.", e: { c: 4, d: 8 }, flag: "cover", r: "The report goes through the shredder. Your hands shake a little.", fate: ["thomas", "Never knew how much danger he was in. Only heard it from you in 1992."] },
@@ -102,7 +103,7 @@ export const STORY = {
   }],
   // ---------------- 1986 ----------------
   "1986-mei": [{
-    id: "tsjernobyl", via: "telefoon", title: "Chernobyl", who: "Major Kessler",
+    id: "tsjernobyl", tease: "On RIAS, a Swedish power station is measuring radiation that does not come from Sweden.", via: "telefoon", title: "Chernobyl", who: "Major Kessler",
     text: "‘Neues Deutschland printed a short TASS report about an ‘accident’ in Ukraine. At the Poliklinik, doctors are telling patients not to eat lettuce and to keep children indoors. Western propaganda. I want it stopped.’",
     choices: [
       { t: "Intimidate the doctors", d: "Interviews with the whole team.", e: { g: 6, c: -10, o: -3 }, fx: (S, A) => A.workers("kliniek").forEach(p => { p.fear += 20; A.pages(p.id, 5); }), r: "The doctors fall silent. Local vegetables, which the West no longer wants to buy, are cheap in the Kaufhalle." },
@@ -129,7 +130,7 @@ export const STORY = {
   }],
   // ---------------- 1987 ----------------
   "1987-mrt": [{
-    id: "fuchs", via: "telefoon", title: "A new colleague", who: "Major Kessler and Oberleutnant Fuchs",
+    id: "fuchs", tease: "In the canteen they say a young Oberleutnant from Potsdam-Eiche is coming to your department.", via: "telefoon", title: "A new colleague", who: "Major Kessler and Oberleutnant Fuchs",
     text: "Kessler introduces Oberleutnant Rüdiger Fuchs: young, ambitious, just back from the college in Potsdam-Eiche. ‘Fuchs will take Greifswalder Straße off your hands, unless you show me you need him.’\n\nFuchs smiles. ‘We can work together. You share your IMs with me, I share my successes.’",
     choices: [
       { t: "Work together", d: "He gets access to your network.", e: { g: -2, fu: -20 }, r: "Fuchs is charming. You are not quite sure what he does with your information.", flag: "fuchsAlly" },
@@ -138,10 +139,10 @@ export const STORY = {
     ]
   }],
   "1987-jun": [{
-    id: "mauerkonzert", via: "telefoon", person: "micha", title: "‘Die Mauer muss weg!’", who: "Volkspolizei, Unter den Linden",
+    id: "mauerkonzert", tease: "Kessler: ‘The West is putting on a concert right by the Wall. Loudspeakers pointing east. Keep your weekend free.’", via: "telefoon", person: "micha", title: "‘Die Mauer muss weg!’", who: "Volkspolizei, Unter den Linden",
     text: "From 6 to 8 June, Western bands played right by the Reichstag: Bowie, Eurythmics, Genesis. Hundreds of young East Berliners listened on this side of the Wall and chanted ‘Die Mauer muss weg!’ — the Wall must go. The Vopo arrested dozens. One of them lives in your district: Micha Seidel, 19, apprentice welder.",
     choices: [
-      { t: "Have him released", d: "A stupid boy. He has learned his lesson.", e: { g: -4, c: 5 }, r: "Micha walks out of the cell. He does not look back.", fate: ["micha", "Became a welder in West Berlin in 1990. He never found out who let him go."] },
+      { t: "Have him released", d: "A stupid boy. He has learned his lesson.", e: { g: -4, c: 5 }, flag: "michaFree", r: "Micha walks out of the cell. He does not look back.", fate: ["micha", "Became a welder in West Berlin in 1990. He never found out who let him go."] },
       { t: "Recruit him", d: "Punks know punks. (+1 IM)", e: { g: 6, c: -9 }, fx: (S, A) => A.makeIM("micha", "Gitarre"), r: "After three sleepless nights he signs. ‘Can I go home now?’", fate: ["micha", "Reported on his own band. Stopped in 1989; his friends found it in the files in 1993."] },
       { t: "Charge him with ‘rowdyism’", d: "§215. An example to others.", e: { g: 9, c: -12, o: -2, res: 1 }, fx: (S, A) => A.setStatus("micha", "gevangen"), r: "Micha gets ten months. At his workplace the foreman puts up a warning.", fate: ["micha", "Served ten months. Was bought free by West Germany in 1989."] },
     ]
@@ -165,7 +166,7 @@ export const STORY = {
     ]
   }],
   "1987-nov": [{
-    id: "inval", via: "telefoon", title: "Operation ‚Falle‘", who: "Major Kessler — direct order",
+    id: "inval", tease: "Kessler, on the stairs: ‘Keep tomorrow night free. Wear boots.’", via: "telefoon", title: "Operation ‚Falle‘", who: "Major Kessler — direct order",
     text: "‘Tonight we roll up the Umwelt-Bibliothek at the Zionskirche. They print their Umweltblätter there. You lead team two. Printing machines, paper, names. Understood?’",
     choices: [
       { t: "Take part, as ordered", d: "You are an officer.", e: { g: 10, c: -8, o: 4, res: 1 }, fx: (S, A) => { A.workers("kerk").forEach(p => A.pages(p.id, 10)); }, r: "At midnight you carry boxes out. The boys who were printing come with you. Outside, people stand with candles. Every evening there are more of them." },
@@ -237,7 +238,7 @@ export const STORY = {
     ]
   }],
   "1989-aug": [{
-    id: "hongarije", via: "gezin", person: "thomas", title: "Across the lake", who: "Thomas, your brother",
+    id: "hongarije", tease: "At ten at night the doorbell rings. Three short rings: the way your brother always rang.", via: "gezin", person: "thomas", title: "Across the lake", who: "Thomas, your brother",
     cond: S => !S.flags.betray,
     text: "Thomas turns up at your door one evening, unannounced. Quietly: ‘Since May, Hungary has been tearing down the fence on the Austrian border. At a picnic near Sopron, hundreds of our people just walked across. We're going next week, in the Trabi, the whole family. I'm telling you because you're my brother.’ A pause. ‘Come with us. Katrin and Jens too.’",
     choices: [
@@ -256,7 +257,7 @@ export const STORY = {
     ]
   }],
   "1989-okt": [{
-    id: "zeven", via: "telefoon", title: "Forty years of the GDR", who: "Major Kessler — tense",
+    id: "zeven", tease: "On the radio: Gorbachev lands in East Berlin tomorrow. In the corridor, nobody is laughing.", via: "telefoon", title: "Forty years of the GDR", who: "Major Kessler — tense",
     text: "‘Gorbachev is in town. At the Palast der Republik they are chanting his name. Tonight we move in at the Gethsemanekirche. You choose who from your district gets picked up.’",
     choices: [
       { t: "Make a long list", d: "Everyone in your files.", e: { g: 10, c: -15, o: 8 }, fx: (S, A) => A.people().filter(p => p.status === "vrij" && p.pages >= 15).forEach(p => { A.log(p.id, "Arrested on 7 October 1989"); A.pages(p.id, 10); }), r: "Hundreds of people are picked up that night. Some are beaten. The pictures go round the world." },
@@ -270,16 +271,25 @@ export const STORY = {
     choices: [
       { t: "Observe, as always", d: "A balcony, a camera.", e: { g: 2, c: -2 }, r: "Below you, hundreds of thousands of people walk past. Their placards quote their own constitution: Articles 27 and 28, freedom of expression and of assembly. You stop taking pictures." },
       { t: "Join in, in plain clothes", d: "Just one of them.", e: { c: 6, fam: 4, d: 4 }, r: "You walk among the people. On the stage: writers, actors, a pastor. And Markus Wolf, the former spymaster. You know his voice from the canteen." },
-      { t: "Stay at the office", d: "Sort files. Just in case.", e: { c: -3, d: -5 }, r: "The building is quiet. There's a television in the corridor. You watch the Alex full of people, live on state TV. You turn the sound off and keep sorting." },
+      { t: "Stay at the office", d: "Sort files. Just in case.", e: { c: -3, d: -5 }, flag: "sorted", r: "The building is quiet. There's a television in the corridor. You watch the Alex full of people, live on state TV. You turn the sound off and keep sorting." },
     ]
   }],
   "1989-nov": [{
-    id: "muur", via: "telefoon", title: "The Wall", who: "Kreisdienststelle, evening",
+    id: "muur", tease: "A press conference is announced for this evening. A routine one, they say.", via: "telefoon", title: "The Wall", who: "Kreisdienststelle, evening",
     text: "On the radio a Politbüro spokesman says something muddled about travel ‘immediately, without delay’. Around half past eleven the barrier goes up at Bornholmer Straße. The Wall is open.\n\nIn the corridor the shredders are running. Kessler is back. He says: ‘Everything with names in it. Tonight.’",
     choices: [
       { t: "Shred", d: "Protect the network. And yourself.", e: { c: -10, d: -30 }, flag: "shred", r: "You work until the machines overheat. Then you tear by hand.", end: true },
       { t: "Leave the files", d: "Let people read one day what happened.", e: { c: 12 }, flag: "keep", r: "You put the boxes back in the cupboard and walk outside. In the street, strangers are hugging each other.", end: true },
       { t: "To Bornholmer Straße", d: "Watch. Just watch.", e: { c: 6, fam: 10 }, flag: "walk", r: "You walk with the crowd, your service pass deep in your pocket. Someone pushes a bottle of sparkling wine into your hands. On the other side, people are clapping.", end: true },
+    ]
+  }],
+  "1989-nov4b": [{
+    id: "michaAlex", via: "dossier", person: "micha", title: "A face in the crowd", who: "Alexanderplatz, Saturday afternoon",
+    cond: S => S.flags.michaFree && S.people.some(p => p.id === "micha" && p.status === "vrij"),
+    text: "Somewhere near the Haus des Lehrers someone grabs your sleeve. Mohawk, a home-made placard. Micha Seidel.\n\n‘You let me go in '87. I never told anyone.’ He looks at your plain coat. ‘Today we're even, Leutnant.’",
+    choices: [
+      { t: "Nod", d: "Say nothing.", e: { c: 3 }, r: "He disappears into the crowd. His placard says: ‘Privileges for all!’" },
+      { t: "‘Go home, Micha.’", d: "Old habits.", e: { c: -1 }, r: "He laughs. ‘Home? This is home now.’" },
     ]
   }],
 };
@@ -346,6 +356,129 @@ export const CONDITIONAL = [
     choices: [
       { t: "Let them go", d: "You lose an IM.", e: { c: 4, g: -2 }, fx: (S, A, ctx) => { A.setStatus(ctx.pid, "vrij"); A.log(ctx.pid, "Allowed to stop as an IM"); }, r: "{Z} walks out the door, relieved, and does not look back." },
       { t: "Threaten", d: "‘Do you want your neighbours to know you're an IM?’", e: { c: -7 }, fx: (S, A, ctx) => { const p = A.p(ctx.pid); p.honesty = Math.max(10, p.honesty - 25); }, r: "{Z} stays. But the reports get shorter, and vaguer." },
+    ]
+  },
+  // ---------- uitgestelde gevolgen: keuzes van vroeger komen terug ----------
+  {
+    id: "brandtCar", via: "dossier", person: "brandt", title: "A breakdown on Greifswalder Straße", who: "Dieter Brandt, car mechanic",
+    cond: (S, t) => TURNS[t].y >= 1986 && S.flags.brandtSpared && S.people.some(p => p.id === "brandt" && p.status === "vrij"), chance: 0.6,
+    text: "The Wartburg from the motor pool dies at a red light. Of all the people in Prenzlauer Berg, it is Dieter Brandt who stops. He has the bonnet up before you can say anything.\n\n‘Three years ago someone made a report about me disappear,’ he says to the engine. ‘I don't know who. But I'd buy him a beer.’",
+    choices: [
+      { t: "Accept the help", d: "And listen.", e: { c: 2 }, fx: (S, A) => { const c = A.workers("fabriek").filter(p => p.id !== "brandt" && p.status === "vrij"); const q = A.rand(c); if (q) { const t = A.rand(q.traits.filter(t => !q.known[t])); if (t) { q.known[t] = { s: "zeker" }; A.log(q.id, "Mentioned by Brandt"); } } }, r: "While he works he talks about the factory: who is fiddling the overtime, who wants to leave. He doesn't know he is talking to the Ministry. Or he knows exactly." },
+      { t: "‘I'll manage.’", d: "Keep your distance.", e: {}, r: "Brandt shrugs and wipes his hands. ‘As you like, comrade.’" },
+    ]
+  },
+  {
+    id: "brandtDrunk", via: "telefoon", person: "brandt", title: "Shouting in the street", who: "Volkspolizei, Prenzlauer Berg",
+    cond: (S, t) => TURNS[t].y >= 1987 && S.flags.brandtOV && S.people.some(p => p.id === "brandt" && free(p)), chance: 0.6,
+    text: "‘A drunk outside Kollwitzstraße 12, comrade. Dieter Brandt, lost his job in '85. He is shouting that you ruined him. By name. The whole street is at the windows.’",
+    choices: [
+      { t: "Have him taken away", d: "A night in the cells.", e: { c: -4, d: -2, g: 1 }, fx: (S, A) => A.log("brandt", "Detained overnight for ‘disturbing the peace’"), r: "Two Vopos lead him off. In the morning your neighbours greet you a little more politely than usual. That is worse." },
+      { t: "Go down and talk to him", d: "In front of everyone.", e: { c: 4, d: 5 }, r: "You stand in the street in your slippers. Brandt cries. Herr Pohl watches from his window and writes something down." },
+      { t: "Ignore it", d: "He'll stop eventually.", e: { o: 2, fam: -4 }, r: "He shouts until one in the morning. Jens asks who the man is. You don't answer." },
+    ]
+  },
+  {
+    id: "annaPost", via: "dossier", person: "anna", title: "A postcard from Hamburg", who: "Abteilung M (postal control)",
+    cond: (S, t) => TURNS[t].y >= 1986 && S.flags.annaPassed && S.people.some(p => p.id === "anna" && p.status === "uitgereisd"),
+    text: "Postal control forwards a copy. A card from Hamburg, the harbour at night, addressed to ‘the officer in Kollwitzstraße’. On the back: ‘Thank you for the stamp. A.’\n\nThe original has gone to Kessler.",
+    choices: [
+      { t: "Explain it to Kessler", d: "‘Routine. She was let go legally.’", e: { g: -2, d: -2 }, r: "Kessler reads the card twice. ‘Sentimental people,’ he says. ‘In the West they are all sentimental.’" },
+      { t: "Say nothing", d: "Hope it gets lost in a drawer.", e: { d: 6, c: 2 }, r: "It does not get lost. Nothing ever gets lost here." },
+    ]
+  },
+  {
+    id: "moewe", via: "dossier", person: "anna", title: "IM „Möwe“ wants her reward", who: "Treff in the Konspirative Wohnung „Linde“",
+    cond: (S, t) => TURNS[t].y >= 1987 && S.flags.annaIM && S.people.some(p => p.id === "anna" && p.status === "im"),
+    text: "Anna Weiss sits on the edge of the armchair. ‘Three years. You promised. My fiancé has married someone else in Hamburg. I want to leave anyway. You promised me.’",
+    choices: [
+      { t: "Keep the promise", d: "You lose an informer.", e: { c: 5, g: -3 }, fx: (S, A) => { A.setStatus("anna", "vrij"); A.later(2, "anna-leave"); A.log("anna", "Released as IM, exit approved"); }, r: "You sign the form. Anna doesn't thank you. She just looks at your hand holding the pen." },
+      { t: "String her along", d: "‘Next year. Definitely.’", e: { c: -6 }, fx: (S, A) => { const a = A.p("anna"); a.loyal = Math.max(0, (a.loyal || 30) - 30); a.honesty = Math.max(10, a.honesty - 20); }, r: "She nods. Her reports become shorter. And less true." },
+    ]
+  },
+  {
+    id: "hertaCake", via: "gezin", person: "herta", title: "A cake at the door", who: "Herta Schulz, caretaker",
+    cond: (S, t) => TURNS[t].y >= 1987 && S.flags.hertaIM,
+    text: "Herta Schulz is at your door with a Bienenstich. ‘My boy got his place at the Charité. Medicine! I know who to thank.’\n\nKatrin is standing behind you in the hall. ‘Why is the caretaker from Greifswalder Straße thanking you?’",
+    choices: [
+      { t: "Take the cake", d: "‘Herta exaggerates.’", e: { fam: -4, c: -2 }, r: "Katrin cuts the cake without a word. Nobody eats it." },
+      { t: "Send her away", d: "Not on your doorstep.", e: { fam: -1 }, fx: (S, A) => { const h = A.p("herta"); if (h) h.loyal = Math.max(0, (h.loyal || 50) - 15); }, r: "Herta goes red and walks down the stairs with the cake. She will not bring one again." },
+    ]
+  },
+  {
+    id: "lenaJens", via: "gezin", person: "lena", title: "Jens has a fever", who: "Poliklinik Prenzlauer Berg",
+    cond: (S, t) => TURNS[t].y >= 1986 && S.flags.lenaLet && S.people.some(p => p.id === "lena" && p.status === "vrij"),
+    text: "Jens has been burning up for three days. At the Poliklinik there are no antibiotics. The nurse on duty is Lena Vogt. She looks at you for a long moment, then fetches a small packet from her own bag. A West German brand.\n\n‘From my sister in Cologne. Her letters arrive these days.’",
+    choices: [
+      { t: "Thank her", d: "Quietly.", e: { fam: 8, c: 3 }, r: "By Sunday Jens is out of bed and arguing about football. Katrin asks where the medicine came from. ‘A nurse,’ you say. It is the truth." },
+      { t: "Report the West medicine", d: "Rules are rules.", e: { fam: 4, c: -10, g: 3 }, fx: (S, A) => { A.pages("lena", 12); A.log("lena", "Reported for handing out West German medicine"); }, r: "Jens gets better. Lena Vogt is given a reprimand. When you pass her in the corridor, she looks right through you." },
+    ]
+  },
+  {
+    id: "kuehnWife", via: "dossier", person: "kuehn", title: "An envelope at the gate", who: "Gate of the Kreisdienststelle",
+    cond: (S, t) => TURNS[t].y >= 1987 && S.flags.kuehnZers,
+    text: "A woman hands an envelope to the guard and walks away without waiting. Inside: copies of the anonymous letters that broke Pastor Kühn's marriage. And one sheet in her own handwriting: ‘I don't know your name. But I know you exist.’",
+    choices: [
+      { t: "File it", d: "Another sheet for the file.", e: { c: -3 }, r: "You punch two holes and file it under K. It is the only document in the file that is addressed to you." },
+      { t: "Stop the measure", d: "Quietly close the file.", e: { c: 5, g: -3 }, r: "No more letters go to the rectory. It is too late for that marriage. It might not be too late for something else." },
+    ]
+  },
+  {
+    id: "leakThanks", via: "dossier", title: "A line in a samizdat sheet", who: "Seized at a raid",
+    cond: (S, t) => TURNS[t].y >= 1988 && S.flags.leak,
+    text: "Page four of a seized Umweltblätter, at the bottom: ‘Thank you to the friend who phoned in November. You know who you are.’\n\nFuchs has underlined it in red and put it in your tray.",
+    choices: [
+      { t: "Burn your copy", d: "And act as if nothing happened.", e: { d: 4, fu: 5 }, r: "Fuchs asks about the sheet the next day. ‘Which sheet?’ you say." },
+      { t: "Keep it", d: "In your inside pocket.", e: { d: 6, c: 3 }, r: "You read it again in the tram. You know who you are. That is the problem." },
+    ]
+  },
+  {
+    id: "warnedHelp", via: "gezin", title: "A note under the door", who: "Kollwitzstraße 12, your flat",
+    cond: (S, t) => (S.warned || []).some(w => t >= w.t + 2),
+    text: "A folded note under your door, no name: ‘Someone phoned us in time. If it was you: thank you. Be careful in your own building. The old man on your landing writes everything down.’",
+    choices: [
+      { t: "Burn the note", d: "In the stove.", e: { c: 3 }, flag: "pohl", r: "You watch it curl up. Then you look at Herr Pohl's door for a long time." },
+    ]
+  },
+  // ---------- het gezin raakt betrokken ----------
+  {
+    id: "jensPunk", via: "dossier", title: "A boy at the concert", who: "IM report, Zionskirche",
+    cond: (S, t) => TURNS[t].y >= 1987 && t >= 19,
+    text: "Report on Saturday's ‘blues mass’ in the Zionskirche. List of known faces. At the bottom: ‘Also present: a boy of about twelve, son of an employee of the Ministry, living in Kollwitzstraße.’\n\nThat is Jens.",
+    choices: [
+      { t: "Tear the page out", d: "Nobody needs to read that line.", e: { d: 6, c: 2 }, r: "The page goes into the stove at home. Jens asks what you are burning. ‘Old receipts,’ you say.", flag: "jensHidden" },
+      { t: "Talk to Jens", d: "Tonight, in the kitchen.", e: { fam: -8, c: -1 }, r: "‘You read reports about me?’ Jens shouts. Katrin closes the kitchen door. Then she opens it again, to listen." },
+      { t: "Let it go upstairs", d: "Nobody can say you protect your own.", e: { g: 3, d: -3, fam: -14, c: -6 }, r: "Jens's school receives a letter. His class teacher asks him to stay behind. He is twelve." },
+    ]
+  },
+  {
+    id: "katrinEingabe", via: "gezin", person: "lena", title: "Katrin's signature", who: "Katrin",
+    cond: (S, t) => TURNS[t].y >= 1988 && !S.flags.alone,
+    text: "‘Lena Vogt from the Poliklinik asked me to sign an Eingabe. About the medicine. Twenty women from the building have signed.’ Katrin holds the pen. ‘Should I?’",
+    choices: [
+      { t: "‘Don't.’", d: "For your own sake.", e: { fam: -10, c: -2 }, r: "She puts the pen down. ‘For your sake, you mean.’" },
+      { t: "‘Sign it.’", d: "It's a complaint, not a crime.", e: { fam: 6, c: 3, d: 6 }, r: "Katrin signs with your surname. In black and white, on a list that will end up in a file. Possibly yours." },
+      { t: "‘Tell me who else signs.’", d: "Your wife as a source.", e: { fam: -18, c: -10, g: 3 }, fx: (S, A) => { A.know("lena", "klager"); A.pages("lena", 8); }, r: "Katrin gives you three names, slowly. Then she goes to bed without saying goodnight. She won't ask you anything for weeks." },
+    ]
+  },
+  {
+    id: "jensArmy", via: "gezin", title: "Three years", who: "Jens, 14, and his class teacher",
+    cond: (S, t) => TURNS[t].y >= 1989 && !S.flags.alone,
+    text: "The class teacher came by. Jens can go to the EOS, later study. On one condition: he signs up for three years in the NVA instead of eighteen months. ‘Everyone in the class is signing,’ says Jens. He looks at you. He doesn't want to.",
+    choices: [
+      { t: "‘Sign. It's only three years.’", d: "His future comes first.", e: { fam: -10, g: 2 }, r: "Jens signs. He doesn't look at you while he does it." },
+      { t: "Back his refusal", d: "‘Eighteen months is enough.’", e: { fam: 8, d: 4, g: -2 }, r: "The school notes it. Your department notes it. Jens hugs you, for the first time in two years." },
+      { t: "Make a phone call", d: "A word in the right ear.", e: { g: -4, d: 3, fam: 4 }, r: "One call to the district education office and the condition is gone. Jens never finds out why it was so easy. Like so many people." },
+    ]
+  },
+  // ---------- Fuchs onderzoekt jou: microfoons in je eigen flat ----------
+  {
+    id: "homeBugs", via: "gezin", title: "The phone clicks", who: "Katrin",
+    cond: (S, t) => TURNS[t].y >= 1988 && S.flags.fuchsMet && (S.fuchs >= 25 || S.dossier >= 40) && !S.homeBugs,
+    text: "‘Our phone clicks when I pick it up. And yesterday a man from the housing office was in the flat when I came home. He said he was checking the stove.’ Katrin lowers her voice. ‘We don't have a problem with the stove.’",
+    choices: [
+      { t: "‘I'll have a look.’", d: "Search your own flat: Kollwitzstraße 12.", e: {}, fx: (S, A) => A.plantHomeBugs(), r: "You know how it is done. You have ordered it often enough. Go home and search: the stairwell at Kollwitzstraße 12, then your flat." },
+      { t: "‘You're imagining it.’", d: "Better not to know.", e: { fam: -4, d: 3 }, fx: (S, A) => A.plantHomeBugs(), r: "You say it a little too loudly. As if someone else should hear it too." },
     ]
   },
 ];

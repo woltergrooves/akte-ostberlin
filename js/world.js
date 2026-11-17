@@ -1,8 +1,9 @@
 // ===================== 3D: kantoor + wijk (Three.js) =====================
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { BUILDINGS } from "./data.js";
+import { BUILDINGS, SLOGANS } from "./data.js";
 import { instance } from "./assets.js";
+import { buildInterior, radioModel } from "./interiors.js";
 
 const SHORT = { kollwitz: "Kollwitz 12", lychener: "Lychener 40", greif: "Greifswalder", dimi: "Dimitroff", kerk: "Zionskirche", fabriek: "Bergmann-Borsig", school: "EOS school", kliniek: "Poliklinik", cafe: "Café Mosaik", konsum: "Kaufhalle", mfs: "MfS" };
 const CELL = 6.5;
@@ -99,6 +100,7 @@ export function createWorld(container, H, M = {}) {
   const labelsEl = document.getElementById("labels");
 
   let mode = "office";
+  let IN = null, interiorBadges = {}, kasOpen = false, curYear = 0;   // binnenruimte, geldkistje, spandoekjaar
   const clock = new THREE.Clock();
 
   // ======================= KANTOOR =======================
@@ -116,7 +118,7 @@ export function createWorld(container, H, M = {}) {
   O.add(lampLight);
 
   const tappables = []; // {obj, key, label, anchor}
-  function tappable(obj, key, label, anchor) { obj.traverse(m => m.userData.tap = key); tappables.push({ obj, key, label, anchor: anchor || obj.position.clone().add(new THREE.Vector3(0, 0.2, 0)) }); }
+  function tappable(obj, key, label, anchor, cls = "") { obj.traverse(m => m.userData.tap = key); tappables.push({ obj, key, label, cls, anchor: anchor || obj.position.clone().add(new THREE.Vector3(0, 0.2, 0)) }); }
 
   // vloer & muren
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), mat(0x5a4c3a, { roughness: 0.95 }));
@@ -173,8 +175,8 @@ export function createWorld(container, H, M = {}) {
   const mapG = new THREE.Group();
   const mapM = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.76), lam({ map: mapTex, roughness: 0.9 }));
   mapG.add(mapM); mapG.add(box(1.0, 0.81, 0.02, mat(0x3a2c1d), 0, 0, -0.012, false));
-  mapG.position.set(-1.2, 1.62, -1.58); O.add(mapG);
-  tappable(mapG, "wijk", "Map: to the district", new THREE.Vector3(-1.2, 2.06, -1.5));
+  mapG.position.set(-1.25, 2.5, -1.58); mapG.scale.setScalar(0.7); O.add(mapG);
+  tappable(mapG, "wijk", "Map: to the district", new THREE.Vector3(-1.25, 2.82, -1.5), "sm");
 
   // klok
   const clockG = new THREE.Group();
@@ -190,8 +192,19 @@ export function createWorld(container, H, M = {}) {
   const desk = new THREE.Group();
   desk.add(box(2.3, 0.06, 2.5, deskMat, 0, DESK_Y - 0.03, 0.4));
   // voorgrond: krant, notitieblok, stempel
-  const newsTex = canvasTex(256, 320, (g, w, h) => { g.fillStyle = "#e6e0cf"; g.fillRect(0, 0, w, h); g.fillStyle = "#222"; g.font = "bold 30px Georgia"; g.fillText("DIE TRIBÜNE", 14, 38); g.fillRect(10, 48, w - 20, 3); g.font = "bold 20px Georgia"; g.fillText("Plan zu 104% erfüllt", 14, 80); g.fillStyle = "#555"; for (let y = 96; y < h - 10; y += 9) g.fillRect(14 + ((y / 9) % 3 === 0 ? 120 : 0), y, (y / 9) % 3 === 0 ? 100 : 228, 4); g.fillStyle = "#777"; g.fillRect(14, 100, 110, 80); });
+  let newsLine = "";
+  const newsTex = canvasTex(256, 320, (g, w, h) => { }, 1);
+  function drawNews() {
+    const g = newsTex.userData.ctx; g.setTransform(1, 0, 0, 1, 0, 0); const w = 256, h = 320;
+    g.fillStyle = "#e6e0cf"; g.fillRect(0, 0, w, h); g.fillStyle = "#222"; g.font = "bold 25px Georgia"; g.textAlign = "left"; g.fillText("NEUES DEUTSCHLAND", 10, 34); g.fillRect(10, 44, w - 20, 3);
+    g.font = "bold 17px Georgia"; const words = String(newsLine || "").split(" "); let line = "", y = 72, n = 0;
+    for (const wd of words) { if (g.measureText(line + wd).width > w - 26) { g.fillText(line, 12, y); y += 20; line = ""; if (++n > 3) break; } line += wd + " "; } if (n <= 3) g.fillText(line, 12, y);
+    g.fillStyle = "#555"; for (let yy = y + 18; yy < h - 10; yy += 9) g.fillRect(14 + ((yy / 9 | 0) % 3 === 0 ? 120 : 0), yy, (yy / 9 | 0) % 3 === 0 ? 100 : 228, 4); g.fillStyle = "#777"; g.fillRect(14, y + 22, 110, 70);
+    newsTex.needsUpdate = true;
+  }
+  drawNews();
   const news = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.52), lam({ map: newsTex, roughness: 0.95 })); news.rotation.set(-Math.PI / 2, 0, 0.35); news.position.set(0.32, DESK_Y + 0.004, 0.85); news.receiveShadow = true; desk.add(news);
+  tappable(news, "krant", "Newspaper", new THREE.Vector3(0.32, DESK_Y + 0.12, 0.9), "sm");
   const pad = box(0.24, 0.012, 0.32, mat(0xefe9d6), -0.42, DESK_Y + 0.006, 0.8); pad.rotation.y = -0.2; desk.add(pad);
   const pen = cyl(0.008, 0.008, 0.16, mat(0x1b2a4a, { roughness: 0.3 }), -0.38, DESK_Y + 0.02, 0.78, 8); pen.rotation.set(Math.PI / 2, 0, 0.9); desk.add(pen);
   const stamp = new THREE.Group(); stamp.add(cyl(0.035, 0.04, 0.03, mat(0x3a2a1c), 0, DESK_Y + 0.015, 0)); stamp.add(cyl(0.015, 0.015, 0.07, mat(0x5a3d24), 0, DESK_Y + 0.065, 0, 10)); const knob = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 8), mat(0x2a1d12, { roughness: 0.3 })); knob.position.y = DESK_Y + 0.11; stamp.add(knob);
@@ -302,7 +315,38 @@ export function createWorld(container, H, M = {}) {
   cab.add(box(0.62, 1.3, 0.55, cabMat, 0, 0.65, 0));
   for (let i = 0; i < 4; i++) { cab.add(box(0.56, 0.28, 0.02, mat(0x6d786b, { metalness: 0.4, roughness: 0.45 }), 0, 0.2 + i * 0.31, 0.28)); cab.add(box(0.14, 0.03, 0.03, brass, 0, 0.27 + i * 0.31, 0.3)); cab.add(box(0.1, 0.05, 0.005, mat(0xefe7d2), 0, 0.22 + i * 0.31, 0.292)); }
   cab.position.set(1.3, 0, -1.25); cab.rotation.y = -0.35; O.add(cab);
-  tappable(cab, "kartotheek", "Card index", new THREE.Vector3(1.3, 1.45, -1.25));
+  tappable(cab, "kartotheek", "Card index", new THREE.Vector3(1.3, 1.62, -1.25));
+  // radio (RFT) op de kast: aan/uit, nieuws van de beurt
+  const radio = radioModel(); radio.position.set(1.3, 1.3, -1.25); radio.rotation.y = -0.35; radio.scale.setScalar(1.15); O.add(radio);
+  tappable(radio, "radio", "Radio", new THREE.Vector3(1.05, 1.48, -1.05), "sm");
+  let radioOn = false;
+  // handboek op het bureau
+  const book = new THREE.Group(); book.add(box(0.17, 0.035, 0.24, mat(0x7a1b16), 0, DESK_Y + 0.018, 0)); book.add(box(0.16, 0.03, 0.005, mat(0xe6dcc0), 0.004, DESK_Y + 0.018, 0.12));
+  book.position.set(-0.8, 0, 0.55); book.rotation.y = 0.3; O.add(book);
+  tappable(book, "boek", "Handbook", new THREE.Vector3(-0.8, DESK_Y + 0.16, 0.55), "sm");
+  // geldkistje: inventaris, eigen aantekeningen, onderscheidingen
+  const kas = new THREE.Group(); const kasM = mat(0x5f6a5e, { metalness: 0.4 });
+  kas.add(box(0.26, 0.09, 0.17, kasM, 0, DESK_Y + 0.045, 0)); const lid = new THREE.Group(); lid.add(box(0.26, 0.02, 0.17, mat(0x6d786b), 0, 0, 0.085)); lid.position.set(0, DESK_Y + 0.1, -0.085); kas.add(lid);
+  kas.add(box(0.05, 0.02, 0.01, brass, 0, DESK_Y + 0.07, 0.09)); kas.position.set(0.95, 0, 0.42); kas.rotation.y = -0.5; O.add(kas);
+  tappable(kas, "kassette", "Strongbox", new THREE.Vector3(0.95, DESK_Y + 0.2, 0.42), "sm");
+  let lidOpen = 0;
+  // prikbord met draden
+  const pinTex = canvasTex(256, 192, (g, w, h) => { }, 1);
+  let pinData = { cards: 0, threads: 0 };
+  function drawPins() {
+    const g = pinTex.userData.ctx; g.setTransform(1, 0, 0, 1, 0, 0); const w = 256, h = 192;
+    g.fillStyle = "#b08a5a"; g.fillRect(0, 0, w, h); for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(60,40,20,${Math.random() * 0.25})`; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+    const n = Math.min(12, pinData.cards), pos = [];
+    for (let i = 0; i < n; i++) { const x = 22 + (i % 4) * 58 + ((i * 13) % 9), y = 20 + Math.floor(i / 4) * 56 + ((i * 7) % 8); pos.push([x + 18, y + 4]); g.fillStyle = "#efe9d8"; g.fillRect(x, y, 38, 44); g.fillStyle = "#8a8070"; g.fillRect(x + 8, y + 8, 22, 18); g.fillStyle = "#555"; g.fillRect(x + 5, y + 32, 28, 3); }
+    g.strokeStyle = "#c42a1f"; g.lineWidth = 2; for (let k = 0; k < Math.min(pinData.threads, 14) && pos.length > 1; k++) { const a = pos[(k * 3) % pos.length], b = pos[(k * 5 + 1) % pos.length]; if (a === b) continue; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+    pos.forEach(([x, y]) => { g.fillStyle = "#d42a1e"; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); });
+    if (!n) { g.fillStyle = "rgba(40,25,10,.6)"; g.font = "bold 18px Arial"; g.textAlign = "center"; g.fillText("EMPTY", w / 2, h / 2 + 6); }
+    pinTex.needsUpdate = true;
+  }
+  drawPins();
+  const pinG = new THREE.Group(); pinG.add(new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.54), lam({ map: pinTex }))); pinG.add(box(0.77, 0.59, 0.02, mat(0x3a2c1d), 0, 0, -0.012, false));
+  pinG.position.set(-1.15, 1.62, -1.58); pinG.scale.setScalar(1.25); O.add(pinG);
+  tappable(pinG, "prikbord", "Pinboard", new THREE.Vector3(-1.05, 2.0, -1.5));
 
   // deur
   const door = new THREE.Group(); door.add(box(0.95, 2.1, 0.05, mat(0x6b5236, { roughness: 0.5 }), 0, 1.05, 0)); door.add(cyl(0.03, 0.03, 0.08, brass, 0.38, 1.05, 0.05)); door.children[1].rotation.x = Math.PI / 2;
@@ -411,6 +455,9 @@ export function createWorld(container, H, M = {}) {
   const flagMat = (() => { const t = canvasTex(96, 64, (g, w, h) => { g.fillStyle = "#141414"; g.fillRect(0, 0, w, h / 3); g.fillStyle = "#c42a1f"; g.fillRect(0, h / 3, w, h / 3); g.fillStyle = "#e0b62a"; g.fillRect(0, 2 * h / 3, w, h / 3); g.fillStyle = "#c42a1f"; g.beginPath(); g.arc(w / 2, h / 2, 13, 0, 7); g.fill(); g.strokeStyle = "#e0b62a"; g.lineWidth = 3; g.beginPath(); g.arc(w / 2, h / 2, 10, 0, 7); g.stroke(); }, 1); return lam({ map: t, side: THREE.DoubleSide }); })();
 
 
+  // spandoeken met leuzen die per jaar wisselen (SLOGANS in data.js)
+  const banners = [];
+  function drawBanners(lines) { banners.forEach(t => { const gg = t.userData.ctx; gg.setTransform(1, 0, 0, 1, 0, 0); const w = 64, h = 256; gg.fillStyle = "#b8231a"; gg.fillRect(0, 0, w, h); gg.fillStyle = "#f2e9d4"; gg.font = "bold 12px Arial"; gg.textAlign = "center"; const L = lines || ["FÜR", "FRIEDEN", "UND", "SOZIA-", "LISMUS"]; L.forEach((tx, i) => gg.fillText(tx, w / 2, 128 - (L.length - 1) * 17 + i * 34)); t.needsUpdate = true; }); }
   // gebouwen
   const bGroups = {};
   const dTappables = [];
@@ -431,7 +478,7 @@ export function createWorld(container, H, M = {}) {
         const sm = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 0.7), new THREE.MeshBasicMaterial({ map: sl, transparent: true, side: THREE.DoubleSide })); sm.position.set(0, 13.4, 1.0); g.add(sm);
         for (let k = -2; k <= 2; k++) g.add(box(0.05, 0.9, 0.05, mat(0x333333), k * 1.2, 12.8, 1.0));
       } else {
-        const bn = canvasTex(64, 256, (gg, w, h) => { gg.fillStyle = "#b8231a"; gg.fillRect(0, 0, w, h); gg.fillStyle = "#f2e9d4"; gg.font = "bold 13px Arial"; gg.textAlign = "center"; ["FÜR", "FRIEDEN", "UND", "SOZIA-", "LISMUS"].forEach((t, i) => gg.fillText(t, w / 2, 40 + i * 34)); }, 1);
+        const bn = canvasTex(64, 256, (gg, w, h) => { }, 1); banners.push(bn);
         const bm = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 4.6), lam({ map: bn, side: THREE.DoubleSide })); bm.position.set(-2.82, 6.5, 0); bm.rotation.y = -Math.PI / 2; g.add(bm);
       }
     } else if (b.kind === "kerk") {
@@ -496,6 +543,8 @@ export function createWorld(container, H, M = {}) {
     D.add(g); bGroups[b.id] = g; dTappables.push(g);
   });
 
+  drawBanners();
+  const winterChims = [];
   // opvulling: gesloten Altbau-blokken zoals in Prenzlauer Berg
   const OLDCOLS = [0x8c8577, 0x7d776c, 0x9a9182, 0x857a68, 0x6f6a62, 0xa0957f, 0x7a7266];
   let fi = 0;
@@ -508,7 +557,7 @@ export function createWorld(container, H, M = {}) {
     } else {
       const floors = 4 + ((bx + bz + 9) % 3);
       oldBlock(g, 4.4, 4.4, floors, OLDCOLS[fi % OLDCOLS.length], 1000 + fi * 37, fi % 3 === 0 ? SHOPS[fi % SHOPS.length] : null, k < 4);
-      if (g.userData.chim && fi % 2 === 0) { const c = g.userData.chim; allChimneys.push(new THREE.Vector3(bx * CELL + c[0] * 0.86, c[1], bz * CELL + c[2] * 0.86)); }
+      if (g.userData.chim) { const c = g.userData.chim; const sg = bz % 2 ? 1 : -1; const vv = new THREE.Vector3(bx * CELL + sg * c[0] * 0.86, c[1], bz * CELL + sg * c[2] * 0.86); (fi % 2 === 0 ? allChimneys : winterChims).push(vv); }
     }
     g.rotation.y = (bz % 2 ? 0 : Math.PI);
     g.scale.set(0.86, 1, 0.86);
@@ -527,8 +576,16 @@ export function createWorld(container, H, M = {}) {
   }
   const posterTex = canvasTex(128, 64, (g, w, h) => { const cols = ["#c42a1f", "#e6dcc0", "#2a4a7a", "#d8b23e", "#4a6a3a"]; for (let i = 0; i < 8; i++) { g.fillStyle = cols[i % 5]; g.fillRect(i * 16, 0, 16, h); g.fillStyle = "#1d1d1d"; g.fillRect(i * 16 + 3, 10, 10, 3); g.fillRect(i * 16 + 3, 40, 8, 2); } });
   posterTex.wrapS = THREE.RepeatWrapping;
-  [[-1, 0.5], [2, -0.5], [-3, 1.5], [0, -1.5], [3, 1.5]].forEach(([i, j]) => { const c = new THREE.Group(); c.add(cyl(0.38, 0.38, 2.2, lam({ map: posterTex }), 0, 1.1, 0, 10)); c.add(cyl(0.46, 0.42, 0.25, mat(0x2f4a3a), 0, 2.3, 0, 10)); c.position.set((i + 0.5) * CELL - 1.15, 0, j * CELL + 1.3); D.add(c); });
-  const booth = new THREE.Group(); booth.add(box(0.7, 2, 0.7, mat(0xd9cfa9), 0, 1, 0)); booth.add(box(0.74, 0.25, 0.74, mat(0xd8a92e), 0, 2.1, 0)); booth.add(box(0.5, 1.2, 0.02, lam({ color: 0x2a3238 }), 0, 1.15, 0.36, false)); booth.position.set(0.5 * CELL + 1.2, 0, 0.3 * CELL); D.add(booth);
+  const SPECIAL = [];
+  [[-1, 0.5], [2, -0.5], [-3, 1.5], [0, -1.5], [3, 1.5]].forEach(([i, j], k) => { const c = new THREE.Group(); c.add(cyl(0.38, 0.38, 2.2, lam({ map: posterTex }), 0, 1.1, 0, 10)); c.add(cyl(0.46, 0.42, 0.25, mat(0x2f4a3a), 0, 2.3, 0, 10)); c.position.set((i + 0.5) * CELL - 1.15, 0, j * CELL + 1.3); D.add(c);
+    if (k === 0) { c.scale.setScalar(1.25); c.traverse(m => m.userData.bld = "litfass"); dTappables.push(c); SPECIAL.push({ id: "litfass", label: "Litfaßsäule", anchor: c.position.clone().add(new THREE.Vector3(0, 3.4, 0)) }); } });
+  const booth = new THREE.Group(); booth.add(box(0.7, 2, 0.7, mat(0xd9cfa9), 0, 1, 0)); booth.add(box(0.74, 0.25, 0.74, mat(0xd8a92e), 0, 2.1, 0)); booth.add(box(0.5, 1.2, 0.02, lam({ color: 0x2a3238 }), 0, 1.15, 0.36, false)); booth.position.set(0.5 * CELL + 1.2, 0, 0.3 * CELL); booth.scale.setScalar(1.2); D.add(booth);
+  booth.traverse(m => m.userData.bld = "booth"); dTappables.push(booth); SPECIAL.push({ id: "booth", label: "Phone box", anchor: booth.position.clone().add(new THREE.Vector3(0, 3.2, 0)) });
+  // Intershop-paviljoen (alleen tegen Westgeld)
+  const ishop = new THREE.Group(); ishop.add(box(2.2, 1.6, 1.4, mat(0xe8e2d0), 0, 0.8, 0)); ishop.add(box(2.3, 0.1, 1.5, mat(0x3a3a3a), 0, 1.65, 0));
+  const isTex = canvasTex(128, 24, (gg, w, h) => { gg.fillStyle = "#1d1d1d"; gg.fillRect(0, 0, w, h); gg.fillStyle = "#ffd54f"; gg.font = "bold 16px Arial"; gg.textAlign = "center"; gg.fillText("INTERSHOP", w / 2, 18); }, 1);
+  const isM = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.34), new THREE.MeshBasicMaterial({ map: isTex })); isM.position.set(0, 1.4, 0.71); ishop.add(isM); ishop.add(box(1.4, 0.8, 0.03, lam({ color: 0xcbd8d8, emissive: 0x2a3030 }), 0, 0.7, 0.71, false));
+  ishop.position.set(2.0 * CELL - 1.2, 0, 1.5 * CELL + 1.0); ishop.rotation.y = 0; D.add(ishop);
 
   // tram (Tatra) op de Dimitroffstraße-as
   const TRAM_Z = -1.5 * CELL;
@@ -634,18 +691,36 @@ export function createWorld(container, H, M = {}) {
     const p = person(coatCols[i % coatCols.length], i);
     const horiz = i % 2 === 0;
     const lane = horiz ? ((i % 6) - 3 + 0.5) * CELL : ((i % 10) - 5 + 0.5) * CELL;
-    Object.assign(p.userData, { horiz, lane: lane + (i % 4 < 2 ? 1.05 : -1.05), dir: i % 3 === 0 ? -1 : 1, pos: (i * 7.3) % 60 - 30, speed: 0.6 + (i % 5) * 0.12, ph: i });
+    Object.assign(p.userData, { horiz, lane: lane + (i % 4 < 2 ? 1.05 : -1.05), dir: i % 3 === 0 ? -1 : 1, pos: (i * 7.3) % 60 - 30, speed: 0.6 + (i % 5) * 0.12, ph: i, fig: FIGS[i % FIGS.length] });
     D.add(p); walkers.push(p);
   }
-  // rij voor de Kaufhalle
+  // rij voor de Kaufhalle: langer als er Bückware is
   const kb = BUILDINGS.find(b => b.id === "konsum");
-  for (let i = 0; i < 7; i++) { const p = person(coatCols[(i + 3) % coatCols.length], i, ["fig_vrouw", "fig_burgeres", "fig_burger", "fig_vrouw", "fig_arbeider", "fig_burgeres", "fig_vrouw"][i]); p.position.set(kb.x * CELL - 2.2 + i * 0.6, 0, kb.z * CELL + 2.6); p.rotation.y = -Math.PI / 2; D.add(p); }
+  const queue = [];
+  for (let i = 0; i < 12; i++) { const p = person(coatCols[(i + 3) % coatCols.length], i, ["fig_vrouw", "fig_burgeres", "fig_burger", "fig_vrouw", "fig_arbeider", "fig_burgeres", "fig_vrouw"][i % 7]); p.position.set(kb.x * CELL - 2.2 + i * 0.6, 0, kb.z * CELL + 2.6 + (i > 6 ? 0.5 : 0)); if (i > 6) p.position.x = kb.x * CELL - 2.2 + (i - 7) * 0.6 + 4.2; p.rotation.y = -Math.PI / 2; D.add(p); queue.push(p); }
+  // tint: kopie van het materiaal met een kleur (FDJ-blauwhemden, pioniers)
+  function tint(p, col) { p.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.color = new THREE.Color(col); } }); return p; }
+  const groups = { subbotnik: new THREE.Group(), fdj: new THREE.Group(), pioneers: new THREE.Group(), intershop: new THREE.Group() };
+  Object.values(groups).forEach(g => { g.visible = false; D.add(g); });
+  const lb = BUILDINGS.find(b => b.id === "lychener");
+  for (let i = 0; i < 5; i++) { const p = person(coatCols[i], i, ["fig_arbeider", "fig_vrouw", "fig_burger", "fig_burgeres", "fig_arbeider"][i]); p.position.set(lb.x * CELL - 1.8 + i * 0.9, 0, lb.z * CELL + 2.9); p.rotation.y = i * 1.3; posePerson(p, 0.3, false); const br = cyl(0.025, 0.025, 1.3, mat(0x8a6a3a), 0.3, 0.6, 0.2, 5); br.rotation.z = 0.5; p.add(br); groups.subbotnik.add(p); }
+  const sb = BUILDINGS.find(b => b.id === "school");
+  for (let i = 0; i < 8; i++) { const p = tint(person(0x2f5aa8, i, i % 2 ? "fig_burgeres" : "fig_burger"), 0x6a8ad8); p.position.set(sb.x * CELL - 2 + (i % 4) * 0.8, 0, sb.z * CELL + 3.2 + Math.floor(i / 4) * 0.8); p.rotation.y = Math.PI / 2; groups.fdj.add(p); }
+  const fdjFlag = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.6), lam({ color: 0x2f5aa8, side: THREE.DoubleSide })); fdjFlag.position.set(sb.x * CELL + 1.3, 2.3, sb.z * CELL + 3.2); groups.fdj.add(fdjFlag); groups.fdj.add(cyl(0.03, 0.03, 2.6, mat(0x8a6a3a), sb.x * CELL + 0.85, 1.3, sb.z * CELL + 3.2, 5));
+  for (let i = 0; i < 10; i++) { const p = tint(person(0xdddddd, i, i % 2 ? "fig_burgeres" : "fig_burger"), 0xe0e4f0); p.scale.setScalar(0.62); const nk = box(0.2, 0.09, 0.12, mat(i % 3 ? 0x2f5aa8 : 0xc42a1f), 0, 1.12, 0.1); p.add(nk); p.position.set(sb.x * CELL + 1.5 + (i % 5) * 0.55, 0, sb.z * CELL + 1.0 + Math.floor(i / 5) * 0.6); p.rotation.y = -Math.PI / 2; groups.pioneers.add(p); }
+  for (let i = 0; i < 3; i++) { const p = person(coatCols[i + 4], i, ["fig_burger", "fig_burgeres", "fig_punk"][i]); p.position.set(2.0 * CELL - 2.2 + i * 0.7, 0, 1.5 * CELL + 2.2); p.rotation.y = Math.PI; groups.intershop.add(p); }
+  // extra vlaggen op feestdagen
+  const festFlags = new THREE.Group(); festFlags.visible = false; D.add(festFlags);
+  BUILDINGS.filter(b => b.res || b.kind === "konsum").forEach((b, k) => { for (let j = 0; j < 3; j++) { const fl = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.55), j % 2 ? flagMat : lam({ color: 0xc42a1f, side: THREE.DoubleSide })); fl.position.set(b.x * CELL - 1.4 + j * 1.4, 3.6 + (k % 2) * 0.6, b.z * CELL + 2.05); festFlags.add(fl); flags.push(fl); } });
 
+  const walkInfo = []; let walkSel = null; const AXW = new THREE.Vector3(1, 0, 0);
   // fabrieksrook
   const smokeD = []; const sMatD = lam({ color: 0xb7b2a6, transparent: true, opacity: 0.35, depthWrite: false });
   const chim = allChimneys;
   for (let i = 0; i < chim.length * 6; i++) { const s = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), sMatD.clone()); s.userData = { t: (i * 0.37) % 1, c: chim[i % chim.length], big: i % chim.length < 2 }; D.add(s); smokeD.push(s); }
 
+  const smokeW = []; const sMatW = lam({ color: 0x9a968c, transparent: true, opacity: 0.3, depthWrite: false });
+  for (let i = 0; i < winterChims.length * 3; i++) { const s = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), sMatW.clone()); s.userData = { t: (i * 0.31) % 1, c: winterChims[i % winterChims.length] }; s.visible = false; D.add(s); smokeW.push(s); }
   // sneeuw
   const snowN = 1500; const snowGeo = new THREE.BufferGeometry(); const sp = new Float32Array(snowN * 3);
   for (let i = 0; i < snowN; i++) { sp[i * 3] = (Math.random() - 0.5) * 90; sp[i * 3 + 1] = Math.random() * 40; sp[i * 3 + 2] = (Math.random() - 0.5) * 90; }
@@ -663,26 +738,45 @@ export function createWorld(container, H, M = {}) {
   const labelMap = new Map();
   function labelEl(id, text, cls) {
     let el = labelMap.get(id);
-    if (!el) { el = document.createElement("button"); el.className = "lbl3d " + (cls || ""); el.dataset.id = id; labelsEl.appendChild(el); labelMap.set(id, el); el.addEventListener("click", ev => { ev.stopPropagation(); const [kind, key] = id.split(":"); if (kind === "o") H.onOffice(key); else H.onBuilding(key); }); }
+    if (!el) { el = document.createElement("button"); el.className = "lbl3d " + (cls || ""); el.dataset.id = id; labelsEl.appendChild(el); labelMap.set(id, el); el.addEventListener("click", ev => { ev.stopPropagation(); const [kind, key] = id.split(":"); if (kind === "o") H.onOffice(key); else if (kind === "i") H.onInterior(key); else if (kind === "w") H.onWalker(+key); else H.onBuilding(key); }); }
     if (el._t !== text) { el.innerHTML = text; el._t = text; }
     return el;
   }
   const v = new THREE.Vector3();
   let officeBadges = {};
   let bInfo = {};
+  // eenvoudige ontwarring: labels die elkaar raken schuiven omlaag
+  function declutter(list) {
+    list.sort((a, b) => a.y - b.y); const placed = [];
+    list.forEach(L => { const wd = L.el.offsetWidth, ht = L.el.offsetHeight; let y = L.y;
+      for (let k = 0; k < 6; k++) { const hit = placed.find(p => Math.abs(p.x - L.x) < (p.w + wd) / 2 + 4 && Math.abs(p.y - y) < ht + 3); if (!hit) break; y = hit.y + ht + 4; }
+      placed.push({ x: L.x, y, w: wd }); L.el.style.transform = `translate(-50%,-100%) translate(${L.x}px,${y}px)`; });
+  }
   function updateLabels() {
     const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
     labelMap.forEach(el => el.style.display = "none");
+    const pend = [];
     if (mode === "office") {
       tappables.forEach(t => {
         if (!t.obj.visible) return;
         const badge = officeBadges[t.key];
-        const el = labelEl("o:" + t.key, t.label + (badge ? ` <b>${badge}</b>` : ""), (t.key === "onderzoek" ? "red " : "") + (badge ? "hot" : ""));
+        const el = labelEl("o:" + t.key, t.label + (badge ? ` <b>${badge}</b>` : ""), (t.key === "onderzoek" ? "red " : "") + (badge ? "hot " : "") + (t.cls || ""));
         v.copy(t.anchor).project(oCam);
         if (v.z > 1) return;
-        el.style.display = "block"; const lw = el.offsetWidth / 2 + 6; el.style.transform = `translate(-50%,-100%) translate(${Math.min(w - lw, Math.max(lw, (v.x + 1) / 2 * w))}px,${(1 - v.y) / 2 * h}px)`;
+        el.style.display = "block"; const lw = el.offsetWidth / 2 + 6; pend.push({ el, x: Math.min(w - lw, Math.max(lw, (v.x + 1) / 2 * w)), y: (1 - v.y) / 2 * h });
       });
+      declutter(pend);
+    } else if (mode === "interior" && IN) {
+      IN.spots.forEach(t => {
+        const badge = interiorBadges[t.key];
+        const el = labelEl("i:" + t.key, t.label + (badge ? ` <b>${badge}</b>` : ""), badge ? "hot" : "");
+        v.copy(t.anchor).project(IN.cam); if (v.z > 1) return;
+        el.style.display = "block"; const lw = el.offsetWidth / 2 + 6; pend.push({ el, x: Math.min(w - lw, Math.max(lw, (v.x + 1) / 2 * w)), y: Math.max(150, (1 - v.y) / 2 * h) });
+      });
+      declutter(pend);
     } else {
+      SPECIAL.forEach(sp => { v.copy(sp.anchor).project(dCam); const el = labelEl("b:" + sp.id, sp.label, "sm"); if (v.z > 1) return; el.style.display = "block"; el.style.transform = `translate(-50%,-100%) translate(${(v.x + 1) / 2 * w}px,${(1 - v.y) / 2 * h}px)`; });
+      if (walkSel) { const p = walkers[walkSel.i]; if (p) { v.set(p.position.x, 2.1, p.position.z).project(dCam); const el = labelEl("w:" + walkSel.i, walkSel.label, "sel"); el.style.display = "block"; el.style.transform = `translate(-50%,-100%) translate(${(v.x + 1) / 2 * w}px,${(1 - v.y) / 2 * h}px)`; } }
       BUILDINGS.forEach(b => {
         const g = bGroups[b.id]; v.set(g.position.x, g.userData.height + 2.3, g.position.z).project(dCam);
         const info = bInfo[b.id] || "";
@@ -705,8 +799,16 @@ export function createWorld(container, H, M = {}) {
       ray.setFromCamera(ptr, oCam);
       const hit = ray.intersectObjects(tappables.map(t => t.obj).filter(o => o.visible), true)[0];
       if (hit && hit.object.userData.tap) H.onOffice(hit.object.userData.tap);
+    } else if (mode === "interior" && IN) {
+      ray.setFromCamera(ptr, IN.cam);
+      const hit = ray.intersectObjects(IN.spots.map(s => s.obj), true)[0];
+      if (hit && hit.object.userData.tap) H.onInterior(hit.object.userData.tap);
     } else {
       ray.setFromCamera(ptr, dCam);
+      // eerst voorbijgangers (ruime trefzone), dan gebouwen
+      let best = -1, bd = 1e9; const sp = new THREE.Vector3();
+      walkers.forEach((p, i) => { if (!walkInfo[i]) return; sp.set(p.position.x, 0.9, p.position.z).project(dCam); const dx = (sp.x - ptr.x) * r.width / 2, dy = (sp.y - ptr.y) * r.height / 2; const d = dx * dx + dy * dy; if (d < bd) { bd = d; best = i; } });
+      if (best >= 0 && bd < 26 * 26) { H.onWalker(best); return; }
       const hit = ray.intersectObjects(dTappables, true)[0];
       if (hit && hit.object.userData.bld) H.onBuilding(hit.object.userData.bld);
     }
@@ -726,6 +828,7 @@ export function createWorld(container, H, M = {}) {
     oCam.lookAt(oTarget); oCam.updateProjectionMatrix();
     const hw = aspect < 1 ? 15 : 24; const hh = hw / aspect;
     Object.assign(dCam, { left: -hw, right: hw, top: hh, bottom: -hh }); dCam.updateProjectionMatrix();
+    if (IN) IN.resize(aspect);
   }
   window.addEventListener("resize", resize); resize();
 
@@ -743,11 +846,16 @@ export function createWorld(container, H, M = {}) {
       // lichte camerabeweging
       oCam.position.x += (Math.sin(t * 0.3) * 0.015 - (oCam.position.x - oTarget.x)) * 0.02;
       oCam.lookAt(oTarget);
+      if (radioOn && radio.userData.dial) radio.userData.dial.material.color.setHex(Math.sin(t * 3) > -0.6 ? 0xe9c86a : 0xb89a4a);
+      lidOpen += ((kasOpen ? 1 : 0) - lidOpen) * 0.15; lid.rotation.x = -lidOpen * 1.4;
       draw(O, oCam);
+    } else if (mode === "interior" && IN) {
+      IN.update(t, dt); draw(IN.scene, IN.cam);
     } else {
       controls.update();
       cars.forEach(c => { const u = c.userData; u.pos += u.dir * u.speed * dt; if (u.pos > 34) u.pos = -34; if (u.pos < -34) u.pos = 34; if (u.horiz) { c.position.set(u.pos, 0, u.lane); c.rotation.y = u.dir > 0 ? 0 : Math.PI; } else { c.position.set(u.lane, 0, u.pos); c.rotation.y = u.dir > 0 ? -Math.PI / 2 : Math.PI / 2; } });
-      walkers.forEach(p => { const u = p.userData; u.pos += u.dir * u.speed * dt; if (u.pos > 30) u.pos = -30; if (u.pos < -30) u.pos = 30; if (u.horiz) { p.position.set(u.pos, 0, u.lane); p.rotation.y = u.dir > 0 ? Math.PI / 2 : -Math.PI / 2; } else { p.position.set(u.lane, 0, u.pos); p.rotation.y = u.dir > 0 ? 0 : Math.PI; } posePerson(p, Math.sin(t * 7 * u.speed + u.ph) * 0.6, false); });
+      walkers.forEach((p, i) => { const u = p.userData; if (walkSel && walkSel.i === i) { posePerson(p, 0, false); return; } u.pos += u.dir * u.speed * dt; if (u.pos > 30) u.pos = -30; if (u.pos < -30) u.pos = 30; if (u.horiz) { p.position.set(u.pos, 0, u.lane); p.rotation.y = u.dir > 0 ? Math.PI / 2 : -Math.PI / 2; } else { p.position.set(u.lane, 0, u.pos); p.rotation.y = u.dir > 0 ? 0 : Math.PI; } posePerson(p, Math.sin(t * 7 * u.speed + u.ph) * 0.6, false); });
+      if (winter) smokeW.forEach(s => { const u = s.userData; u.t = (u.t + dt * 0.1) % 1; s.position.set(u.c.x + u.t * 3, u.c.y + u.t * 4.5, u.c.z - u.t * 1.2 + Math.sin(u.t * 9) * 0.3); s.scale.setScalar(0.5 + u.t * 2.4); s.material.opacity = 0.28 * (1 - u.t); });
       smokeD.forEach(s => { const u = s.userData; u.t = (u.t + dt * 0.08) % 1; const k = u.big ? 1 : 0.5; s.position.set(u.c.x + u.t * 6 * k, u.c.y + u.t * 7 * k, u.c.z - u.t * 2 * k + Math.sin(u.t * 10) * 0.4); s.scale.setScalar((0.6 + u.t * 3) * k); s.material.opacity = 0.3 * (1 - u.t); });
       BUILDINGS.forEach(b => { const g = bGroups[b.id]; if (g.userData.bug.visible) { g.userData.bug.rotation.y += dt * 2; g.userData.bug.scale.setScalar(1 + Math.sin(t * 5) * 0.15); } if (g.userData.ring.visible) g.userData.ring.material.opacity = 0.55 + Math.sin(t * 4) * 0.3; });
       tram.position.x = ((t * 2.2) % 80) - 40; flags.forEach((f, i) => { f.rotation.y = Math.sin(t * 2 + i) * 0.25; });
@@ -765,14 +873,27 @@ export function createWorld(container, H, M = {}) {
 
   // ======================= API =======================
   return {
-    setMode(m) { mode = m; controls.enabled = m === "district"; labelsEl.dataset.mode = m; },
+    setMode(m) { mode = m; controls.enabled = m === "district"; labelsEl.dataset.mode = m; if (m !== "interior") { IN = null; } if (m !== "district") walkSel = null; },
+    enterInterior(kind, data) { IN = buildInterior(kind, data, M); interiorBadges = data.badges || {}; IN.resize(container.clientWidth / Math.max(1, container.clientHeight)); mode = "interior"; controls.enabled = false; labelsEl.dataset.mode = "interior"; labelMap.forEach((el, id) => { if (id.startsWith("i:")) { el.remove(); labelMap.delete(id); } }); },
+    setInteriorBadges(b) { interiorBadges = b || {}; },
+    setNews(line) { if (line !== newsLine) { newsLine = line; drawNews(); } },
+    setRadio(b) { radioOn = b; },
+    setKassette(b) { kasOpen = b; },
+    setPinboard(d) { if (d.cards !== pinData.cards || d.threads !== pinData.threads) { pinData = d; drawPins(); } },
+    setWalkers(list) { for (let i = 0; i < walkers.length; i++) walkInfo[i] = list[i] || null; },
+    walkerFig: i => walkers[i] && walkers[i].userData.fig,
+    selectWalker(i, label) { walkSel = i == null ? null : { i, label }; labelMap.forEach((el, id) => { if (id.startsWith("w:")) { el.remove(); labelMap.delete(id); } }); },
     getMode: () => mode,
     setRinging(b) { ringing = b; },
     setOffice({ folders: n, badges, caseOpen, date, month }) {
       setFolders(n); officeBadges = badges || {}; caseF.visible = !!caseOpen;
       if (calText[0] !== date || calText[1] !== month) { calText = [date, month]; drawCal(); }
     },
-    setDistrict({ bugs, ims, info, winter: wtr, finale: fin, gone }) {
+    setDistrict({ bugs, ims, info, winter: wtr, finale: fin, gone, year, festive, subbotnik, fdj, pioneers, queue: qn, intershop }) {
+      if (year && year !== curYear) { curYear = year; drawBanners(SLOGANS[year]); }
+      festFlags.visible = !!festive; groups.subbotnik.visible = !!subbotnik; groups.fdj.visible = !!fdj; groups.pioneers.visible = !!pioneers; groups.intershop.visible = !!intershop;
+      queue.forEach((p, i) => p.visible = i < (qn == null ? 7 : qn));
+      smokeW.forEach(s => s.visible = !!wtr);
       BUILDINGS.forEach(b => {
         const g = bGroups[b.id]; g.userData.bug.visible = !!(bugs && bugs[b.id]);
         const n = (ims && ims[b.id]) || 0; const im = g.userData.ims;

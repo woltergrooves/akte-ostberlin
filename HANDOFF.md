@@ -37,31 +37,24 @@ Lees dit bestand eerst. Het wordt na elke fase bijgewerkt.
 6. Antwoord kort en in het Nederlands. Eindig met de korte prompt voor de volgende chat.
 
 ## Status
-- Klaar: fase 1, 1b, 2 en **fase 3 A+B** (17 nov). Speelbaar op https://akte-ostberlin.vercel.app (alleen deze link gebruiken).
-- 3A: `openEvent`/`chooseEvent` stoppen als `q` niet meer in `S.queue` staat; keuzeknoppen gaan direct uit; na een keuze `rerender()`. Postvak (`inboxView`, `msgHTML`, `KLAB`): wacht-op-jou bovenaan, nieuw apart, Dymo-label per soort, eerste regel + uitklappen, oudere beurten in `<details>`.
-- Kartotheek (`cartotheek`, `cardRow`, `KF`, `susLevel`): filters met tellers, laden per adres (`details.lade`) of “Dikste dossiers”; filterstand blijft bewaard in `cartotheek.f`. Inputs zijn 16px (iOS-zoom).
-- 3B: 32 beurten, 9 nieuwe scènes (embleem, Frauen für den Frieden, Ständige Vertretung, Gorbatsjov, Umwelt-Bibliothek, Palme-mars, skinheads Zionskirche, Gueffroy, Alexanderplatz). Bronnen staan in `ROADMAP.md` bij fase 3. Jaardoelen `QUOTA` 1983–1989, save-key `akte-save-v4`. Fuchs-vlag `S.flags.fuchsMet`. Lege beurten (zonder vaste scène): dec. 1984, mrt. 1986, dec. 1986.
-- Test 17 nov: volledige ronde 1983 → epiloog zonder consolefouten (Playwright-script lag in `/tmp`, niet in de repo).
+- Klaar: fase 1, 1b, 2, **3 A+B** en **3 C+D plus alle ideeën** (17 nov). Speelbaar op https://akte-ostberlin.vercel.app (alleen deze link).
+- Save-key nu `akte-save-v5` (nieuwe velden: `links`, `inv`, `warned`, `ownLog`, `homeBugs`, `talked`, `used`, `shredded`, `mods`). Oude saves worden genegeerd.
+- Nieuwe modules: `js/audio.js` (WebAudio-effecten), `js/interiors.js` (binnenruimtes, `buildInterior`), `js/minigames.js` (letter/tape/darkroom), `js/daily.js` (Daily Akte), `js/meta.js` (onderscheidingen, archief, startvoorwaarden; over runs heen in localStorage), `js/lexicon.js` (Handboek: `RULES` wel/niet toegestaan + `CHRONICLE` per beurt).
+- `data.js`: `NEWS` (per beurtsleutel, `[bron, tekst]`, ook als `T.news`), `HOLIDAYS` per maand, `SLOGANS` per jaar, `LINKS` + `makeLinks()` (verbanden per seed), `NEEDS` (wat IM's willen). Bewoners hebben nu 2–3 kenmerken.
+- `world.js`: modus `interior` (`enterInterior(kind, data)`, labels `i:key` → `H.onInterior`), tikbare lopers (`setWalkers`, `selectWalker`, `H.onWalker`), speciale tikplekken `booth` en `litfass` (via `onBuilding`), kantoorobjecten `radio`, `krant`, `kassette`, `prikbord`, `boek`; `setNews`, `setPinboard`, `setRadio`, `setKassette`; `setDistrict` kent nu `year, festive, subbotnik, fdj, pioneers, queue, intershop`. Labels in kantoor en binnenruimtes ontwarren zichzelf (`declutter`).
+- `game.js`: `enterInterior`/`onInterior`/`leaveInterior` (knop `#leave`), `walkerCard`, `gossip` (kenmerk met bron `talk` = roddel, onbevestigd), `treffView`/`kwList`, `boothCall`, `flatSearch`, `pinboardView`, `strongboxView`, `handbook(tab, terug)`, `teaser()` (cliffhanger), `overtime()` (minigame +1 MP), `shredPicker()` (9 nov), `archiveView()`, `discoverLinks()`/`completion()`.
+- Uitgestelde gevolgen werken met vlaggen op keuzes (`brandtSpared`, `annaIM`, `lenaLet`, `kuehnZers`, `michaFree`, `sorted` …) en scènes in `CONDITIONAL` (events.js). Teasers: veld `tease` op een scène.
+- Test 17 nov: drie volledige rondes 1983 → epiloog (met shredderkeuze) zonder consolefouten; alle binnenruimtes en tikplekken los getest; mobiel 390×844 en desktop 1280×800. Testscript lag in `/tmp`.
 
-## Volgende fase: FASE 3 C–E (de rest van de gameplay-herziening)
-Te veel voor één chat? Doe dan C en D, en zet E in de handoff. Houd elk scherm kort: één duidelijke keuze tegelijk (iPhone).
-
-**C. DDR-sfeer**
-- Per beurt een nieuwsregel: radio (DT64, Stimme der DDR), *Aktuelle Kamera*, kop van *Neues Deutschland* op de krant op het bureau. Voeg een veld `news` toe aan `TURNS` en toon het in `briefing()` en op de krant. Alleen feiten die je met een bron kunt controleren; geen verzonnen letterlijke koppen, wel een omschrijving.
-- Kalender met echte feestdagen (1 mei, 7 oktober). In de wijk: rijen voor de Kaufhalle bij ‘Bückware’, Westpakete, Intershop, wachtlijst voor de Trabant, Subbotnik, FDJ-blauwhemden en pioniers, kolenkachelrook in de winter (`T.winter`), spandoeken met leuzen die per jaar wisselen.
-- Geen clichés zonder context: kleine, concrete details die kloppen.
-
-**D. De wereld interactief**
-- Tik op voorbijgangers in de wijk: wie het is, kort gesprek of observatie (koppelen aan bewoners uit `data.js`).
-- Gebouwen in: trappenhuis en woning als kleine 3D-scène, de Kneipe (Café Mosaik), de Kaufhalle, een Konspirative Wohnung, de telefooncel, de litfaßzuil met affiches.
-- Voorwerpen in kantoor en wijk die iets doen (radio aan, krant lezen, la open).
-
-**E. RPG-elementen**
-- Ervaringspunten uit zaken en rapporten; rang hangt daarvan af. Vaardigheden: Observatie, Verhoor, Overtuigen, Techniek (microfoons), Geheimhouding. Ze beïnvloeden de kansen die het spel al toont.
-- Gesprekskeuzes met vaardigheidscheck (kans in procenten, in de huidige stijl).
-- Inventaris: Westgeld, Jacobs-koffie, cassettes, Minox-camera, afluistersets; om informanten te betalen of mensen om te kopen.
-- Reputatie bij Kessler/MfS, de buurt, de kerk en het gezin. Bijmissies per bewoner.
-- Let op: met 6 jaarbeoordelingen kun je snel Major worden. Overweeg bij E een vijfde rang of bevordering via ervaringspunten.
+## Volgende fase: FASE 3E (RPG-elementen)
+Houd elk scherm kort: één duidelijke keuze tegelijk (iPhone).
+- Ervaringspunten uit zaken, rapporten en complete dossiers; rang hangt daarvan af (nu: jaarbeoordeling). Overweeg een vijfde rang of bevordering via XP, want met 6 beoordelingen word je snel Major.
+- Vaardigheden: Observatie, Verhoor, Overtuigen, Techniek (microfoons), Geheimhouding. Ze beïnvloeden de kansen die het spel al toont (werven, observeren, roddel, postcontrole, microfoon ontdekt).
+- Gesprekskeuzes met vaardigheidscheck (kans in procenten, in de huidige stijl), bijv. in `walkerCard` en `treffView`.
+- Verhoor-minigame: tegenstrijdigheid zoeken in iemands verhaal (past naast `js/minigames.js`).
+- Inventaris uitbreiden: er is al `S.inv` met `dm`, `kaffee`, `buck` (geldkistje). Toevoegen: cassettes, Minox-camera, afluistersets; omkopen.
+- Reputatie bij Kessler/MfS, de buurt, de kerk en het gezin; bijmissies per bewoner.
+- Kleine wensen: lopers in de wijk tonen hun naam alleen na tikken; misschien bewoners in binnenruimtes koppelen aan echte personen.
 
 ## Fase 4: animaties (was fase 3)
 - Eerste-persoonshanden in het kantoor: hoorn oppakken als de telefoon gaat (node `Handset`), dossier pakken en openslaan, stempelen bij een beslissing ("GENEHMIGT"/"ABGELEHNT", node `Stamp`), typen bij Afsluiten met papier dat eruit wordt getrokken (`Carriage`, `Paper`). Handen eventueel zelf bouwen als low-poly rigid parts.
