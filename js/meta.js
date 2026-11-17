@@ -12,6 +12,7 @@ export const MEDALS = {
   netz: { t: "Netzwerker", d: "Six informers at the same time.", col: "#3a6db0" },
   rein: { t: "Saubere Hände", d: "Reached the end with a conscience of 70 or more.", col: "#e6dcc0" },
   schweig: { t: "Wer hört mit?", d: "Found the bugs in your own flat.", col: "#5f6a5e" },
+  helfer: { t: "Hilfsbereit", d: "Did four favours for residents in one game.", col: "#7a8f3a" },
   daily: { t: "Tagesbefehl", d: "Solved a Daily Akte.", col: "#d8b23e" },
 };
 export function medals() { return get(K.medals, []); }

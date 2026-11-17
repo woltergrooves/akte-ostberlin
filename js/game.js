@@ -8,8 +8,9 @@ import { playMinigame, MINI } from "./minigames.js";
 import { openDaily, dailyResult, todayKey } from "./daily.js";
 import { MEDALS, medals, award, ARCHIVE, MODS, unlockedMods } from "./meta.js";
 import { RULES, CHRONICLE } from "./lexicon.js";
+import { SKILLS, SK_MAX, XP_PER_POINT, XP, REP, repWord, ERRANDS, errandFor, buildStory, DENIALS } from "./rpg.js";
 
-const SAVE = "akte-save-v5", ENDS = "akte-endings-v2";
+const SAVE = "akte-save-v6", ENDS = "akte-endings-v2";
 const QUOTA = { 1983: { res: 1, ims: 1 }, 1984: { res: 2, ims: 1 }, 1985: { res: 2, ims: 2 }, 1986: { res: 3, ims: 2 }, 1987: { res: 4, ims: 3 }, 1988: { res: 4, ims: 3 }, 1989: { res: 4, ims: 3 } };
 const CODES = ["Rose", "Kranich", "Falke", "Tulpe", "Sonne", "Igel", "Birke", "Anker", "Kompass", "Feder", "Linde", "Pinsel", "Rabe", "Kerze", "Glocke", "Adler", "Uhr", "Heide", "Ostsee", "Stein", "Mohn", "Wolke", "Fichte", "Brücke", "Ahorn", "Taube", "Spiegel", "Distel"];
 const ENDINGS = { overgelopen: "Defected", gearresteerd: "A file of your own", overgeplaatst: "Bitterfeld", nee: "The man who said no", major: "Genosse Major", kantoor: "A small job", werk: "‘I was doing my job’", naam: "A name in everyone's file" };
@@ -36,7 +37,28 @@ const trLabel = t => t === "dubbel" ? "Secretly in contact with the opposition (
 const twOf = p => p.traits.find(t => TRAITS[t] && TRAITS[t].tw);
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
-const INV = { dm: ["Westgeld", "50 DM in an envelope"], kaffee: ["Jacobs Krönung", "a packet of West coffee"], buck: ["Bückware", "a tin of pineapple from under the counter"] };
+const INV = { dm: ["Westgeld", "50 DM in an envelope"], kaffee: ["Jacobs Krönung", "a packet of West coffee"], buck: ["Bückware", "a tin of pineapple from under the counter"],
+  kas: ["Cassette", "an ORWO C60: record a Treff or replay an interrogation"], minox: ["Minox camera", "every observation turns up at least two things"], set: ["Bugging set", "one more bug or phone tap at the same time"] };
+// ---------- RPG (fase 3E) ----------
+const sk = k => (S.sk && S.sk[k]) || 0;
+const points = () => Math.floor(S.xp / XP_PER_POINT) - S.spent;
+const bugCap = () => rank().bugs + (S.inv.set || 0) + (sk("tech") >= 3 ? 1 : 0);
+const pc = v => Math.max(5, Math.min(95, Math.round(v)));
+function rep(k, n) { if (k === "gezin") S.gezin = clamp(S.gezin + n); else if (k === "mfs") S.gunst = clamp(S.gunst + n); else S.rep[k] = clamp(S.rep[k] + n); }
+const repV = k => k === "gezin" ? S.gezin : k === "mfs" ? S.gunst : S.rep[k];
+const churchy = p => p.traits.some(t => ["kerk", "vrede", "milieu"].includes(t)) || p.work === "kerk";
+function gainXP(n) {
+  if (!n || !S) return; const before = points(); S.xp += n;
+  while (S.rank < RANKS.length - 1 && S.xp >= RANKS[S.rank + 1].xp) { S.rank++; S.promo = (S.promo || 0) + 1; }
+  if (points() > before) S.flags._sp = true;
+}
+// kans bij een gesprek: basis + vaardigheid + reputatie − angst/wrok
+function talkChance(p, skill, base = 40) { return pc(base + sk(skill) * 9 + (S.rep.buurt - 50) / 4 + (churchy(p) ? (S.rep.kerk - 50) / 4 : 0) + (p.owes ? 15 : 0) - (p.fear || 0) / 5 - p.dis / 4); }
+function showPromo(next) {
+  S.promo = 0; sfx.fanfare(); if (S.rank >= 3) medal("major"); save(); refresh();
+  modal(`<div class="promo"><div class="epau"><i></i><i></i><i></i></div><div class="ptxt"><div class="dymo">Beförderung</div><b>${esc(rank().id)}</b><small>Kessler pins the new shoulder boards on you himself.</small></div></div>
+    <div class="result">‘Experience counts, comrade. They are talking about you at Normannenstraße.’\n\nFrom next turn: ${rank().mk} manpower, room for ${rank().ims} IMs and ${rank().bugs} bugging sets.</div><button class="next" id="nx">Continue</button>`, m => m.querySelector("#nx").onclick = () => { closeModal(); if (next) next(); }, { lock: true });
+}
 function invAdd(k, n = 1) { S.inv[k] = Math.max(0, (S.inv[k] || 0) + n); }
 function medal(id) { if (award(id)) { sfx.fanfare(); toast(`<b>Decoration:</b> ${esc(MEDALS[id].t)}`); } }
 // ---------- verbanden en dossiercompleetheid (prikbord) ----------
@@ -49,10 +71,10 @@ function discoverLinks() {
     const ca = a.traits.includes(l.k) && conf(a, l.k), cb = b.traits.includes(l.k) && conf(b, l.k);
     let hit = ca && cb;
     [[a, ca], [b, cb]].forEach(([p, c]) => { if (!hit && c && !l.roll[p.id]) { l.roll[p.id] = 1; if (R() < 0.6) hit = true; } });
-    if (hit) { l.found = true; n++; a.pages += 2; b.pages += 2; inbox("info", "New connection", `${a.name} ${LINKS[l.k].l} ${b.name}. A thread on your pinboard.`, a.id); }
+    if (hit) { l.found = true; n++; a.pages += 2; b.pages += 2; gainXP(XP.link); inbox("info", "New connection", `${a.name} ${LINKS[l.k].l} ${b.name}. A thread on your pinboard.`, a.id); }
   });
   if (n) { sfx.telex(4); if (S.links.filter(l => l.found).length >= 12) medal("faden"); }
-  S.people.forEach(p => { if (!p.complete && !p.secretIM && completion(p) >= 100) { p.complete = true; S.stats.complete = (S.stats.complete || 0) + 1; p.pages += 5; applyE({ g: 2 }); inbox("info", "File complete", `The file on ${p.name} is complete: VOLLSTÄNDIG. Kessler likes thick, finished files. (Favour +2)`, p.id); if (S.stats.complete >= 5) medal("kartei"); } });
+  S.people.forEach(p => { if (!p.complete && !p.secretIM && completion(p) >= 100) { p.complete = true; S.stats.complete = (S.stats.complete || 0) + 1; p.pages += 5; applyE({ g: 2 }); gainXP(XP.complete); inbox("info", "File complete", `The file on ${p.name} is complete: VOLLSTÄNDIG. Kessler likes thick, finished files. (Favour +2, +${XP.complete} XP)`, p.id); if (S.stats.complete >= 5) medal("kartei"); } });
 }
 function secrets(p) { return p.traits.length + linksOf(p).length; }
 function completion(p) { const tot = secrets(p); if (!tot) return 100; const k = p.traits.filter(t => conf(p, t)).length + linksOf(p).filter(l => l.found).length; return Math.round(k / tot * 100); }
@@ -89,13 +111,13 @@ function addEnding(id) { try { const e = endings(); if (!e.includes(id)) e.push(
 function newGame(mods = []) {
   const seed = Math.floor(R() * 1e9);
   S = {
-    mods, links: [], inv: { dm: 1, kaffee: 1, buck: 0 }, warned: [], ownLog: [], homeBugs: null, talked: {}, used: {}, shredded: [],
+    mods, links: [], inv: { dm: 1, kaffee: 1, buck: 0, kas: 1, minox: 0, set: 0 }, xp: 0, spent: 0, sk: { obs: 0, verh: 0, ueb: 0, tech: 0, geh: 0 }, rep: { buurt: 50, kerk: 40 }, errands: [], promo: 0, warned: [], ownLog: [], homeBugs: null, talked: {}, used: {}, shredded: [],
     seed, t: 0, gunst: 50, geweten: 70, onrust: 18, dossier: 5, gezin: 60, fuchs: 0, rank: 0, mk: 0, mkNext: 0, res: 0, resTotal: 0,
     people: generatePeople(seed), bugs: {}, taps: {}, inbox: [], queue: [], case: null, caseN: 0, wrongs: [], flags: {}, fates: {}, fired: {},
     quota: null, later: [], home: false, tut: 0, stats: { arrests: 0, recruits: 0, zersetzung: 0, solved: 0, wrong: 0, observe: 0, complete: 0 }, codes: [], over: null,
   };
   S.links = makeLinks(S.people, seed);
-  if (mods.includes("hase")) S.rank = 1;
+  if (mods.includes("hase")) { S.rank = 1; S.xp = RANKS[1].xp; S.spent = Math.floor(S.xp / XP_PER_POINT); }
   startTurn();
 }
 
@@ -105,8 +127,9 @@ function startTurn() {
   S.mk = Math.max(1, rank().mk + S.mkNext - (S.mods.includes("leine") ? 1 : 0)); S.mkNext = 0; S.home = false; S.used = {}; S.talked = {}; S.flags._arrested = null;
   S.buck = R() < 0.4 ? rand(["bananas", "tinned pineapple", "Spreewald gherkins in a jar", "Nordhäuser tights", "a Westpaket-size bag of coffee"]) : null;
   S.later = S.later.filter(l => { if (l.t <= S.t) { runLater(l.id); return false; } return true; });
+  S.errands = S.errands.filter(x => { if (x.due >= S.t) return true; const p = P(x.pid); if (p) { p.dis = Math.min(95, p.dis + 5); addLog(p, "Asked you a favour. You never came back to it."); inbox("info", "A favour forgotten", `${p.name} asked you for ${ERRANDS[x.k].t.toLowerCase()}. You never got round to it. The building knows. (District −4)`, p.id); } rep("buurt", -4); return false; });
   const before = { onrust: S.onrust };
-  if (S.t > 0) { drift(); imTick(); imReports(); bugReports(); tapReports(); fuchsTick(); homeBugTick(); flights(); S.gezin = clamp(S.gezin - 1 - (S.geweten < 30 ? 2 : 0)); S.gunst = clamp(S.gunst - (S.gunst > 75 ? 3 : 1)); maybeCase(); discoverLinks(); }
+  if (S.t > 0) { drift(); imTick(); imReports(); bugReports(); tapReports(); fuchsTick(); homeBugTick(); flights(); S.gezin = clamp(S.gezin - 1 - (S.geweten < 30 ? 2 : 0)); S.gunst = clamp(S.gunst - (S.gunst > 75 ? 3 : 1)); S.rep.buurt += Math.sign(45 - S.rep.buurt); S.rep.kerk += Math.sign(40 - S.rep.kerk); maybeCase(); discoverLinks(); }
   queueEvents();
   save(); refresh();
   if (S.t > 0) briefing(before);
@@ -115,6 +138,7 @@ function startTurn() {
 // ---------- maandoverzicht ----------
 function monthsToReview() { let n = 0; for (let i = S.t; i < TURNS.length; i++) { if (TURNS[i].y !== turn().y) break; n++; if (TURNS[i].review) return n; } return null; }
 function briefing(before) {
+  if (S.promo) return showPromo(() => briefing(before));
   const T = turn(); const items = S.inbox.filter(i => i.t === S.t);
   const cnt = k => items.filter(i => i.k === k).length;
   const li = [];
@@ -125,6 +149,8 @@ function briefing(before) {
   items.filter(i => i.k === "warn" || i.k === "info").forEach(i => li.push(`<b>${esc(i.title)}</b>`));
   if (!cnt("im") && !cnt("bug")) li.push(`<span class="muted">No new information. Recruit informers or plant bugs.</span>`);
   
+  if (S.flags._sp && points() > 0) { delete S.flags._sp; li.unshift(`<b>${points()} skill point${points() > 1 ? "s" : ""}</b> to spend. Tap your rank at the top.`); }
+  const due = S.errands.filter(x => x.due === S.t); if (due.length) li.push(`<b>Last chance:</b> ${due.map(x => esc(P(x.pid).name)).join(", ")} still ${due.length > 1 ? "wait" : "waits"} for the favour you promised.`);
   const mr = monthsToReview(); const q = S.quota;
   const hol = HOLIDAYS[monthOf(T)], ov = overtimeKind();
   sfx.telex(12);
@@ -174,8 +200,8 @@ function drift() {
 
 function imTick() {
   S.people.filter(p => p.status === "im").forEach(im => {
-    if (S.t - (im.lastTreff ?? S.t) > 3) im.loyal = Math.max(0, (im.loyal || 30) - 6);
-    if ((im.loyal || 0) < 12 && !im.doubleAgent && R() < 0.2) { im.doubleAgent = true; addLog(im, "Started talking to the other side"); }
+    if (S.t - (im.lastTreff ?? S.t) > 3) im.loyal = Math.max(0, (im.loyal || 30) - (im.held ? 3 : 6));
+    if ((im.loyal || 0) < 12 && !im.doubleAgent && !im.held && R() < 0.2) { im.doubleAgent = true; addLog(im, "Started talking to the other side"); }
   });
 }
 function homeBugTick() {
@@ -195,7 +221,7 @@ function imReports() {
     if (R() * 100 < im.honesty * (0.7 + (im.loyal || 30) / 300)) {
       const unk = target.traits.filter(t => !target.known[t]);
       if (!unk.length) { inbox("im", head, "‘No new details.’", target.id); return; }
-      const t = rand(unk); target.known[t] = { s: "IM", im: im.id };
+      const t = rand(unk); target.known[t] = { s: "IM", im: im.id }; gainXP(XP.report);
       inbox("im", head, `Reports: ${trLabel(t)}.`, target.id);
       if (im.extra) { im.extra = 0; const t2 = rand(target.traits.filter(x => !target.known[x])); if (t2) { target.known[t2] = { s: "IM", im: im.id }; inbox("im", head + " (under pressure)", `Also reports: ${trLabel(t2)}.`, target.id); } }
     } else {
@@ -221,11 +247,11 @@ function bugReports() {
     for (let k = 0; k < 2; k++) {
       const p = rand(cand); if (!p) break;
       const t = rand(p.traits.filter(t => !p.known[t] || p.known[t].s !== "zeker")); if (!t) continue;
-      p.known[t] = { s: "zeker" }; p.pages += 3;
+      p.known[t] = { s: "zeker" }; p.pages += 3; gainXP(XP.report);
       lines.push(`${p.name}: ${overheardLine(t, p)}\n→ ${trLabel(t)}`);
     }
     if (lines.length) inbox("bug", `Bugged: ${Bd(bid).name}`, lines.join("\n\n"));
-    if (ppl.some(p => p.dis > 50 && p.status === "vrij") && R() < 0.09) {
+    if (ppl.some(p => p.dis > 50 && p.status === "vrij") && R() < 0.09 * (1 - sk("tech") * 0.15)) {
       delete S.bugs[bid]; S.onrust = clamp(S.onrust + 4);
       inbox("warn", "Bug discovered!", `One of your bugs has been found in ${Bd(bid).name}. The story spreads through the district like wildfire.`);
     }
@@ -242,7 +268,7 @@ function tapReports() {
 }
 function fuchsTick() {
   if (!S.flags.fuchsMet || turn().y < 1988) return;
-  if (S.fuchs >= 50 && R() < 0.3) { S.dossier = clamp(S.dossier + 5); inbox("warn", "Fuchs", "Oberleutnant Fuchs has written an internal memo about you. You hear it from the secretary. (Suspicion +5)"); }
+  if (S.fuchs >= 50 && R() < 0.3 - sk("geh") * 0.04) { S.dossier = clamp(S.dossier + 5); inbox("warn", "Fuchs", "Oberleutnant Fuchs has written an internal memo about you. You hear it from the secretary. (Suspicion +5)"); }
   else if (S.fuchs >= 25 && S.res > 0 && R() < 0.2) { S.res--; inbox("warn", "Fuchs", "Fuchs presented one of your results to Kessler as his own. (Results −1)"); }
 }
 function flights() {
@@ -302,14 +328,17 @@ function applyE(e) {
   if (!e) return;
   S.gunst = clamp(S.gunst + (e.g || 0)); S.geweten = clamp(S.geweten + (e.c || 0)); S.onrust = clamp(S.onrust + (e.o || 0));
   if ((e.d || 0) >= 3) ownNote(evCtx || "a note from Kader about your conduct"); 
-  S.dossier = clamp(S.dossier + (e.d || 0)); S.gezin = clamp(S.gezin + (e.fam || 0)); S.fuchs = clamp(S.fuchs + (e.fu || 0));
+  const dd = (e.d || 0) > 0 ? Math.round(e.d * (1 - sk("geh") * 0.1)) : (e.d || 0);
+  S.dossier = clamp(S.dossier + dd); S.gezin = clamp(S.gezin + (e.fam || 0)); S.fuchs = clamp(S.fuchs + (e.fu || 0));
   if (e.res) { S.res += e.res; S.resTotal += e.res; }
   if (e.mk) S.mkNext += e.mk;
+  if (e.xp) gainXP(e.xp);
+  if (e.bu) rep("buurt", e.bu); if (e.ki) rep("kerk", e.ki);
 }
 function chips(e) {
   if (!e) return "";
   const o = []; const f = (k, l, goodUp) => { if (e[k]) { const up = e[k] > 0; o.push(`<span class="chip ${up === goodUp ? "up" : "down"}">${l} ${up ? "+" : ""}${e[k]}</span>`); } };
-  f("g", "Favour", true); f("c", "Conscience", true); f("d", "Suspicion", false); f("fam", "Family", true); f("res", "Result", true); f("mk", "Manpower", true);
+  f("g", "Favour", true); f("c", "Conscience", true); f("d", "Suspicion", false); f("fam", "Family", true); f("res", "Result", true); f("mk", "Manpower", true); f("bu", "District", true); f("ki", "Church", true); f("xp", "XP", true);
   if (e.fu) o.push(`<span class="chip ${e.fu > 0 ? "down" : "up"}">Rivalry Fuchs ${e.fu > 0 ? "+" : ""}${e.fu}</span>`);
   return o.length ? `<div class="chips">${o.join("")}</div>` : "";
 }
@@ -339,7 +368,7 @@ function chooseEvent(q, c) {
   save(); refresh(); rerender();
   modal(`<div class="kicker">${esc(turn().label)} · ${esc(c.t)}</div><h1>${esc(e.title)}</h1>
     <div class="result">${esc(sub(c.r, q.ctx))}</div>${chips(c.e)}<button class="next" id="nx">${c.end ? "Continue →" : "Back to work"}</button>`,
-    m => m.querySelector("#nx").onclick = () => { closeModal(); if (c.end && (c.flag === "shred" || c.flag === "walk")) return shredPicker(c.flag, () => finish()); if (c.end) return finish(c.flag === "fled" ? "overgelopen" : null); if (!checkOver()) nextPending(); }, { lock: true });
+    m => m.querySelector("#nx").onclick = () => { closeModal(); if (c.end && (c.flag === "shred" || c.flag === "walk")) return shredPicker(c.flag, () => finish()); if (c.end) return finish(c.flag === "fled" ? "overgelopen" : null); if (!checkOver()) { nextPending(); if (S.promo) showPromo(); } }, { lock: true });
 }
 // ---------- november 1989: welke dossiers vernietig je? ----------
 function shredPicker(mode, done) {
@@ -360,7 +389,7 @@ function nextPending() { const q = S.queue.find(q => ev(q).via === "telefoon"); 
 
 // ---------- acties ----------
 function spend(n) { if (S.mk < n) { toast("Not enough manpower this turn."); return false; } S.mk -= n; return true; }
-function after(msg, e) { applyE(e); save(); refresh(); if (checkOver()) return; rerender(); if (msg) flash(msg + chips(e)); }
+function after(msg, e) { applyE(e); save(); refresh(); if (checkOver()) return; rerender(); if (S.promo && !$("#modal").classList.contains("open")) { if (msg) flash(msg + chips(e)); return showPromo(); } if (msg) flash(msg + chips(e)); }
 
 const ACT = {
   observe(p) {
@@ -370,12 +399,14 @@ const ACT = {
       if (k.s === "talk" && !p.traits.includes(t)) { delete p.known[t]; lines.push(`✗ Disproved: „${trLabel(t)}“. Just gossip.`); } });
     let got = 0;
     p.twChecked = true;
-    hidden.forEach(t => { if (R() < (TRAITS[t].tw ? 1 : 0.55)) { lines.push("✓ " + trLabel(t)); p.known[t] = { s: "zeker" }; got++; } });
-    if (!got && hidden.length) { const t = rand(hidden); p.known[t] = { s: "zeker" }; lines.push("✓ " + trLabel(t)); }
+    hidden.forEach(t => { if (R() < (TRAITS[t].tw ? 1 : 0.55 + sk("obs") * 0.07)) { lines.push("✓ " + trLabel(t)); p.known[t] = { s: "zeker" }; got++; } });
+    const minGot = Math.min(hidden.length, S.inv.minox ? 2 : 1);
+    while (got < minGot) { const t = rand(hidden.filter(t => !conf(p, t))); if (!t) break; p.known[t] = { s: "zeker" }; lines.push("✓ " + trLabel(t) + (got ? " (Minox)" : "")); got++; }
+    if (S.inv.minox) p.pages += 2;
     if (p.status === "im" && p.doubleAgent && !p.known.dubbel && R() < 0.5) { p.known.dubbel = { s: "zeker" }; lines.push("" + trLabel("dubbel")); }
     if (!lines.length) lines.push("Nothing new. A dull life, or a careful one.");
     discoverLinks();
-    after(`<h1>Observation: ${esc(p.name)}</h1><div class="result">${lines.map(esc).join("\n")}</div><div class="advice">${personAdvice(p)}</div>`);
+    after(`<h1>Observation: ${esc(p.name)}</h1><div class="result">${lines.map(esc).join("\n")}</div><div class="advice">${personAdvice(p)}</div>`, { xp: XP.observe + got * XP.trait });
   },
   post(p) {
     if (!spend(1)) return; p.pages += 4; addLog(p, "Post checked");
@@ -384,21 +415,21 @@ const ACT = {
       closeModal();
       const pool2 = p.traits.filter(t => set.includes(t)); const found = res.skipped ? pool2.slice(0, 1) : res.ok ? pool2 : pool2.slice(0, 2);
       found.forEach(t => p.known[t] = { s: "zeker" });
-      const noticed = !res.ok && !res.skipped && res.msg === "smudged";
+      const noticed = !res.ok && !res.skipped && res.msg === "smudged" && R() > sk("tech") * 0.15;
       if (noticed) { p.dis = Math.min(95, p.dis + 6); p.fear += 10; }
       discoverLinks();
-      after(`<h1>Post check: ${esc(p.name)}</h1><div class="result">${found.length ? found.map(t => "✓ " + esc(trLabel(t))).join("\n") : "Letters from an aunt about the weather. Nothing of note."}${noticed ? "\n\nThe envelope arrives rippled. " + esc(p.fn) + " looks at it for a long time." : res.skipped ? "\n\n(Abteilung M only skims it.)" : ""}</div>`);
+      after(`<h1>Post check: ${esc(p.name)}</h1><div class="result">${found.length ? found.map(t => "✓ " + esc(trLabel(t))).join("\n") : "Letters from an aunt about the weather. Nothing of note."}${noticed ? "\n\nThe envelope arrives rippled. " + esc(p.fn) + " looks at it for a long time." : res.skipped ? "\n\n(Abteilung M only skims it.)" : ""}</div>`, { xp: XP.post + found.length * XP.trait });
     });
   },
   tap(p) {
     if (S.taps[p.id]) { delete S.taps[p.id]; return after(null); }
-    if (pool() >= rank().bugs) return toast(`All your equipment is in use (${rank().bugs}).`);
+    if (pool() >= bugCap()) return toast(`All your equipment is in use (${bugCap()}).`);
     if (!spend(1)) return; S.taps[p.id] = S.t; addLog(p, "Phone tapped");
     after(`<h1>Phone tap installed</h1><div class="result">From next turn you will be listening in on ${esc(p.name)}.</div>`, { c: -1 });
   },
   warn(p) {
-    if (!spend(1)) return; p.dis = Math.max(0, p.dis - 18); p.fear += 25; p.pages += 3; addLog(p, "Warning interview");
-    after(`<h1>Warning interview</h1><div class="result">${esc(p.name)} is picked up for ‘the clarification of a few matters’. Two hours later ${pron(p)} is back outside. Pale.</div>`, { c: -3, g: 1, o: -1, d: p.family ? 3 : 0 });
+    if (!spend(1)) return; p.dis = Math.max(0, p.dis - 18 - sk("verh") * 3); p.fear += 25 + sk("verh") * 4; p.pages += 3; addLog(p, "Warning interview");
+    after(`<h1>Warning interview</h1><div class="result">${esc(p.name)} is picked up for ‘the clarification of a few matters’. Two hours later ${pron(p)} is back outside. Pale.</div>`, { c: -3, g: 1, o: -1, d: p.family ? 3 : 0, bu: -2, ki: churchy(p) ? -2 : 0 });
   },
   recruit(p, how) {
     if (imCount() >= rank().ims) return toast(`As ${rank().id} you can run at most ${rank().ims} IMs.`);
@@ -406,18 +437,18 @@ const ACT = {
     const chance = recruitChance(p, how), cost = how === "gunst" ? 2 : 5 + (TRAITS[how].lev || 1) * 2;
     if (R() < chance) {
       makeIM(p); p.pages += 10; sfx.good();
-      after(`<h1>Signed</h1><div class="result">${esc(p.name)} signs the Verpflichtungserklärung, the pledge to cooperate. Codename: <b>„${esc(p.code)}“</b>.\n\nFrom next turn ${pron(p)} reports on neighbours and colleagues.</div>`, { c: -cost, g: 3 });
+      after(`<h1>Signed</h1><div class="result">${esc(p.name)} signs the Verpflichtungserklärung, the pledge to cooperate. Codename: <b>„${esc(p.code)}“</b>.\n\nFrom next turn ${pron(p)} reports on neighbours and colleagues.</div>`, { c: -cost, g: 3, xp: XP.recruit });
     } else {
       p.dis = Math.min(95, p.dis + 12); p.fear += 10; p.pages += 5; addLog(p, "Refused to become an IM"); sfx.bad();
       const told = R() < 0.35;
-      after(`<h1>Refused</h1><div class="result">${esc(p.name)} refuses to sign.${told ? `\n\nWorse: ${pron(p)} tells people in the district.` : ""}</div>`, { c: -Math.ceil(cost / 2), o: told ? 3 : 1, d: told ? 3 : 0 });
+      after(`<h1>Refused</h1><div class="result">${esc(p.name)} refuses to sign.${told ? `\n\nWorse: ${pron(p)} tells people in the district.` : ""}</div>`, { c: -Math.ceil(cost / 2), o: told ? 3 : 1, d: told ? 3 : 0, bu: told ? -4 : 0, ki: told && churchy(p) ? -4 : 0 });
     }
   },
   zersetzung(p) {
     if (p.pages < 15) return toast("You know too little about this person (file < 15 pages).");
     if (!spend(2)) return;
     const hostile = p.dis >= 30; p.dis = Math.max(0, p.dis - 45); p.status = "zersetzt"; p.pages += 25; S.stats.zersetzung++; addLog(p, "Zersetzung");
-    after(`<h1>Maßnahme: Zersetzung</h1><div class="result">${esc(rand(ZERS))}\n\nWithin a few months ${esc(p.name)} trusts nobody any more. Exactly as intended.</div>`, { c: -12, g: hostile ? 5 : 1, res: hostile ? 1 : 0, o: -2 });
+    after(`<h1>Maßnahme: Zersetzung</h1><div class="result">${esc(rand(ZERS))}\n\nWithin a few months ${esc(p.name)} trusts nobody any more. Exactly as intended.</div>`, { c: -12, g: hostile ? 5 : 1, res: hostile ? 1 : 0, o: -2, xp: XP.zers, bu: -2, ki: churchy(p) ? -5 : 0 });
   },
   arrest(p) {
     if (!evidence(p)) return toast("Not enough evidence: you need at least two confirmed suspicious traits.");
@@ -425,20 +456,20 @@ const ACT = {
     const hostile = p.dis >= 30; p.status = "gevangen"; p.pages += 20; S.stats.arrests++; addLog(p, "Arrested, taken to Hohenschönhausen"); S.flags._arrested = p.name; sfx.stamp();
     if (p.family) { S.flags.betray = true; S.fates[p.id] = "Was arrested by his own brother. Spent fourteen months in Bautzen. Never exchanged another word with you."; }
     const late = turn().y >= 1988;
-    after(`<h1>Arrest</h1><div class="result">Five in the morning. ${esc(p.name)} is allowed to pack a bag. The neighbours watch through the cracks of their doors.${late ? "\n\nBut by now fear works differently: the following Sunday the church is fuller than ever." : ""}</div>`, { c: hostile ? -8 : -15, g: hostile ? 6 : 2, res: hostile ? 1 : 0, o: late ? 2 : -4, fam: p.family ? -30 : 0 });
+    after(`<h1>Arrest</h1><div class="result">Five in the morning. ${esc(p.name)} is allowed to pack a bag. The neighbours watch through the cracks of their doors.${late ? "\n\nBut by now fear works differently: the following Sunday the church is fuller than ever." : ""}</div>`, { c: hostile ? -8 : -15, g: hostile ? 6 : 2, res: hostile ? 1 : 0, o: late ? 2 : -4, fam: p.family ? -30 : 0, xp: XP.arrest, bu: -5, ki: churchy(p) ? -8 : 0 });
   },
   assign(im, target) { if (!spend(1)) return; im.assign = target.id; addLog(im, `Assignment: ${target.name}`); after(`<h1>Assignment given</h1><div class="result">Next turn IM „${esc(im.code)}“ will focus on ${esc(target.name)}.</div>`); },
   drop(im) { im.status = "vrij"; addLog(im, "Dropped as an IM"); after(`<h1>IM dropped</h1><div class="result">„${esc(im.code)}“ never hears from you again. The file disappears into the archive.</div>`); },
   geur(p) { if (!S.case || !spend(1)) return; S.case.geur[p.id] = p.id === S.case.culprit; addLog(p, "Scent sample taken"); after(`<h1>Scent sample</h1><div class="result">A tracker dog sniffs the leaflet and a cloth from ${esc(p.name)}'s chair.\n\n${S.case.geur[p.id] ? "The dog reacts." : "The dog shows no interest."}</div>`, { c: -2 }); },
   bug(bid) {
     if (S.bugs[bid]) { delete S.bugs[bid]; return after(null); }
-    if (pool() >= rank().bugs) return toast(`All your equipment is in use (${rank().bugs}).`);
+    if (pool() >= bugCap()) return toast(`All your equipment is in use (${bugCap()}).`);
     if (!spend(2)) return; S.bugs[bid] = S.t;
     after(`<h1>Bugs planted</h1><div class="result">A ‘plumber’ and a ‘chimney sweep’ visit ${esc(Bd(bid).name)}. From next turn you are listening in.</div>`, { c: -1 });
   },
   home() { if (S.home) return toast("You already went home early this turn."); if (!spend(1)) return; S.home = true; after(`<h1>Home early</h1><div class="result">${rand(["You eat at the table with Katrin and Jens. Nobody asks how your day was.", "Jens shows you his Russian homework. You help him with the cases.", "Katrin puts a record on. You dance in the kitchen, just for a moment."])}</div>`, { fam: 7, c: 1 }); },
 };
-function recruitChance(p, how) { const c = how === "gunst" ? 0.2 + p.loyal / 180 - p.dis / 250 : 0.32 + (TRAITS[how].lev || 1) * 0.16 + p.fear / 250 - p.dis / 300; return Math.max(0.05, Math.min(0.95, c)); }
+function recruitChance(p, how) { let c = how === "gunst" ? 0.2 + p.loyal / 180 - p.dis / 250 : 0.32 + (TRAITS[how].lev || 1) * 0.16 + p.fear / 250 - p.dis / 300; c += sk("ueb") * 0.04 + (p.owes ? 0.15 : 0) + (churchy(p) ? (S.rep.kerk - 50) / 500 : 0); return Math.max(0.05, Math.min(0.95, c)); }
 function bestLever(p) { return Object.keys(p.known).filter(t => TRAITS[t] && TRAITS[t].lev && p.known[t].s === "zeker").sort((a, b) => TRAITS[b].lev - TRAITS[a].lev)[0] || "gunst"; }
 function evidence(p) { return p.caught || Object.keys(p.known).filter(t => p.known[t].s === "zeker" && TRAITS[t] && (TRAITS[t].dis || 0) >= 10).length >= 2; }
 
@@ -446,18 +477,18 @@ function accuse(p) {
   const c = S.case; if (!c) return;
   const right = p.id === c.culprit;
   S.case = null; p.caught = true; p.pages += 15; addLog(p, `Named as the culprit: ${INCIDENTS[c.tmpl].t.toLowerCase()}`);
-  if (right) { S.stats.solved++; applyE({ g: 6, res: 1 }); if (S.stats.solved >= 5) medal("spuer"); }
-  else { S.stats.wrong++; S.wrongs.push({ innocent: p.id, culprit: c.culprit, month: turn().label }); applyE({ g: 4, res: 1 }); }
+  if (right) { S.stats.solved++; applyE({ g: 6, res: 1, xp: XP.solved }); if (S.stats.solved >= 5) medal("spuer"); }
+  else { S.stats.wrong++; S.wrongs.push({ innocent: p.id, culprit: c.culprit, month: turn().label }); applyE({ g: 4, res: 1, xp: XP.wrong }); }
   save(); refresh();
   const opts = [
-    { t: "Arrest", d: "Hohenschönhausen. An example.", f: () => { p.status = "gevangen"; S.stats.arrests++; addLog(p, "Arrested"); return { c: -8, o: turn().y >= 1988 ? 2 : -4, g: 3 }; } },
+    { t: "Arrest", d: "Hohenschönhausen. An example.", f: () => { p.status = "gevangen"; S.stats.arrests++; addLog(p, "Arrested"); return { c: -8, o: turn().y >= 1988 ? 2 : -4, g: 3, bu: -4, ki: churchy(p) ? -6 : 0 }; } },
     { t: "Recruit as IM", d: imCount() >= rank().ims ? "No room in your network." : "Those who are caught sign quickly.", dis: imCount() >= rank().ims, f: () => { makeIM(p); return { c: -6 }; } },
     { t: "Let them go", d: "Frighten and release.", f: () => { p.dis = Math.max(0, p.dis - 25); p.fear += 30; return { c: -2, g: -2 }; } },
   ];
   modal(`<div class="stamp">ERMITTELT</div><div class="kicker">Case closed</div><h1>${esc(p.name)}</h1>
    <div class="result">Kessler is pleased: ‘Good work. The culprit has been found.’ He doesn't ask how sure you are.\n\nWhat happens to ${esc(p.name)}?</div>
    <div class="choices">${opts.map((o, k) => `<button class="ch" data-k="${k}" ${o.dis ? "disabled" : ""}><b>${o.t}</b><span>${esc(o.d)}</span></button>`).join("")}</div>`,
-    m => m.querySelectorAll("button.ch").forEach(b => b.onclick = () => { const e = opts[+b.dataset.k].f(); applyE(e); save(); refresh(); closeModal(); if (!checkOver()) flash(`<h1>Case closed</h1><div class="result">${esc(p.name)}: the file gets its stamp.</div>` + chips(e)); }), { lock: true });
+    m => m.querySelectorAll("button.ch").forEach(b => b.onclick = () => { const e = opts[+b.dataset.k].f(); applyE(e); save(); refresh(); closeModal(); if (!checkOver()) { if (S.promo) showPromo(); flash(`<h1>Case closed</h1><div class="result">${esc(p.name)}: the file gets its stamp.</div>` + chips(e)); } }), { lock: true });
 }
 
 // ---------- maand afsluiten ----------
@@ -496,16 +527,14 @@ function review(next) {
   const q = S.quota, ims = imCount(); const okR = S.res >= q.res, okI = ims >= q.ims;
   const lines = [`Results: ${S.res} of ${q.res} ${okR ? "✓" : "✗"}`, `Active IMs: ${ims} of ${q.ims} ${okI ? "✓" : "✗"}`];
   let e = {};
-  let promo = false;
-  if (okR && okI) { if (S.rank < RANKS.length - 1) { S.rank++; promo = true; lines.push(`\nKessler: ‘Excellent. They are talking about you at Normannenstraße.’\n\nPromoted to ${rank().id}! More manpower (${rank().mk}), room for ${rank().ims} IMs and ${rank().bugs} bugging sets.${rank().unlock ? ` New: ${rank().unlock}.` : ""}`); } else lines.push("\nKessler: ‘I have nothing to criticise.’ A bonus of 500 marks."); e = { g: 8 }; }
+  if (okR && okI) { lines.push(`\nKessler: ‘Excellent. I am putting it in your Kaderakte.’ (+${XP.review} XP)`); e = { g: 8, xp: XP.review }; }
   else if (okR || okI) { lines.push("\nKessler: ‘Adequate. But I expect more zeal.’ No promotion this year."); }
   else { lines.push("\nKessler closes the door. ‘I am beginning to wonder whose side you are on, comrade.’ A note goes into your personnel file."); e = S.mods.includes("kessler") ? { g: -24, d: 16 } : { g: -12, d: 8 }; }
   if (turn().y === 1987 && S.flags.leak) { lines.push("\nAs you leave: ‘Someone warned that church. I will find out who.’"); e.d = (e.d || 0) + 6; }
   if (turn().y === 1988 && S.flags.cover) { lines.push("\nKessler puts a copy on the table. The report about your brother. ‘The original went missing. Strange, isn't it?’"); e.d = (e.d || 0) + 8; e.g = (e.g || 0) - 5; }
   evCtx = "annual assessment"; applyE(e); evCtx = ""; save(); refresh();
-  if (promo) { sfx.fanfare(); if (S.rank >= 3) medal("major"); }
-  modal(`${promo ? `<div class="promo"><div class="epau"><i></i><i></i><i></i></div><div class="ptxt"><div class="dymo">Beförderung</div><b>${esc(rank().id)}</b><small>Kessler pins the new shoulder boards on you himself.</small></div></div>` : ""}<div class="stamp">BEURTEILUNG</div><div class="kicker">${esc(turn().label)}</div><h1>Annual assessment ${turn().y}</h1><div class="result">${esc(lines.join("\n"))}</div>${chips(e)}<button class="next" id="nx">Continue →</button>`,
-    m => m.querySelector("#nx").onclick = () => { closeModal(); next(); }, { lock: true });
+  modal(`<div class="stamp">BEURTEILUNG</div><div class="kicker">${esc(turn().label)}</div><h1>Annual assessment ${turn().y}</h1><div class="result">${esc(lines.join("\n"))}</div>${chips(e)}<button class="next" id="nx">Continue →</button>`,
+    m => m.querySelector("#nx").onclick = () => { closeModal(); if (S.promo) return showPromo(next); next(); }, { lock: true });
 }
 function checkOver() {
   if (S.over) return true;
@@ -538,6 +567,8 @@ function finish(cause) {
   const ownShred = S.shredded.includes("own");
   const own = ownShred ? `In 1992 you request your own file. A few pages are left: you shredded the rest yourself, that night in November. But the reports of IM „Lerche“ were filed elsewhere. Erich Pohl, your neighbour. Every week: when you came home, who visited, whether you drank.${F.pohl ? " You had suspected it." : ""} Even the Stasi did not trust the Stasi.` : `In 1992 you request your own file. ${60 + S.dossier * 3} pages. Informer: IM „Lerche“: Erich Pohl, your neighbour. Every week: when you came home, who visited, whether you drank.${F.pohl ? " You had suspected it. That doesn't make it any less cold." : ""} Even the Stasi did not trust the Stasi.`;
   const fam = F.alone ? "Katrin never came back from Rostock. Jens phones at Christmas." : S.gezin >= 60 ? "Katrin and Jens are still there. In 1996, when he is twenty, Jens asks what you actually did. This time you tell him." : S.gezin >= 30 ? "Katrin stays. At home, nobody talks about the eighties." : "Katrin files for divorce in 1991. ‘I read my own file,’ she says. ‘You weren't in it. But you could have stopped it.’";
+  const repTxt = [S.rep.kerk >= 60 ? "In 1991 Pastor Kühn writes to the commission. ‘He warned us more than once,’ the letter says. It is not the whole truth. It is part of it." : S.rep.kerk < 20 ? "In 1990 the congregation pins a list to the church door. Your name is on it." : "",
+    S.rep.buurt >= 65 ? "In Kollwitzstraße people still greet you. Some of them have read their files." : S.rep.buurt < 20 ? "Someone sprays one word on your front door in Kollwitzstraße. You paint over it. It comes back." : ""].filter(Boolean).join("\n\n");
   // lotgevallen
   const lines = [];
   const seen = new Set();
@@ -553,10 +584,10 @@ function finish(cause) {
   modal(`<div class="stamp">${id === "gearresteerd" ? "VERHAFTET" : "AKTE GEÖFFNET"}</div>
     <div class="kicker">${cause === "gearresteerd" || cause === "overgeplaatst" ? esc(turn().label) : "Epilogue · Stasi Records Act, 1992"}</div>
     <h1>${esc(T[0])}</h1>
-    <div class="result">${esc(T[1])}${files ? "\n\n" + esc(files) : ""}\n\n${esc(own)}\n\n${esc(fam)}</div>
+    <div class="result">${esc(T[1])}${files ? "\n\n" + esc(files) : ""}\n\n${esc(own)}\n\n${esc(fam)}${repTxt ? "\n\n" + esc(repTxt) : ""}</div>
     <div class="kicker" style="margin-top:8px">What became of them</div>
     ${lines.map(([n, t]) => `<div class="ep-item"><b>${esc(n)}</b><p>${esc(t)}</p></div>`).join("")}
-    <div class="ep-item"><b>Your service record</b><p>Rank ${esc(rank().id)} · conscience ${S.geweten} · ${st.recruits} IMs recruited · ${st.arrests} arrests · ${st.zersetzung}× Zersetzung · ${st.solved + st.wrong} cases ‘solved’, ${st.wrong} of them with the wrong culprit</p></div>
+    <div class="ep-item"><b>Your service record</b><p>Rank ${esc(rank().id)} · ${S.xp} XP · ${Object.keys(SKILLS).map(k => `${SKILLS[k].short} ${sk(k)}`).join(" ")} · conscience ${S.geweten} · ${S.stats.errands || 0} favours done · ${st.recruits} IMs recruited · ${st.arrests} arrests · ${st.zersetzung}× Zersetzung · ${st.solved + st.wrong} cases ‘solved’, ${st.wrong} of them with the wrong culprit</p></div>
     <div class="ep-item"><b>Pinboard</b><p>${S.links.filter(l => l.found).length} of ${S.links.length} connections found · ${S.stats.complete || 0} files complete</p></div>
     <div class="ep-item"><b>Endings found: ${found.length} of ${Object.keys(ENDINGS).length}</b><p>${Object.entries(ENDINGS).map(([k, v]) => found.includes(k) ? `✓ ${esc(v)}` : "? ???").join(" · ")}</p></div>
     ${ARCHIVE[found.length - 1] ? `<div class="ep-item arch"><b>New in the archive: ${esc(ARCHIVE[found.length - 1][0])}</b><p>${esc(ARCHIVE[found.length - 1][1])}</p></div>` : ""}
@@ -571,10 +602,10 @@ function bar(lbl, v, cls) { const seg = Math.round(v / 10); return `<div class="
 function refresh() {
   if (!S) return;
   const T = turn();
-  $("#hud").innerHTML = `<div class="hrow"><span class="date">${esc(T.label)}</span><span class="rk">${esc(rank().id)}</span><button class="help" id="helpBtn" aria-label="Help">?</button></div>
+  $("#hud").innerHTML = `<div class="hrow"><span class="date">${esc(T.label)}</span><button class="rk" id="rkBtn">${esc(rank().id)}${points() > 0 ? `<b>+${points()}</b>` : ""}</button><button class="help" id="helpBtn" aria-label="Help">?</button></div>
    <div class="stats">${bar("Favour", S.gunst, "sg")}${bar("Conscience", S.geweten, "sc")}${bar("Suspicion", S.dossier, "sd")}</div>
    <div class="mk"><span class="mkl">MP</span>${"<i class=on></i>".repeat(S.mk)}${"<i></i>".repeat(Math.max(0, rank().mk - S.mk))}<span class="goal">Plan ${T.y}: <b>${S.res}/${S.quota.res}</b> res. · <b>${imCount()}/${S.quota.ims}</b> IM</span></div>`;
-  $("#helpBtn").onclick = showHelp;
+  $("#helpBtn").onclick = showHelp; $("#rkBtn").onclick = () => sheet(kaderView);
   // LED's knipperen bij een verandering
   const nowV = { sg: S.gunst, sc: S.geweten, sd: S.dossier };
   Object.entries(nowV).forEach(([k, v]) => { if (lastV[k] !== undefined && lastV[k] !== v) { const e = $(`#hud .stat.${k}`); if (e) { e.classList.add(v > lastV[k] ? "pulseUp" : "pulseDown"); } } lastV[k] = v; });
@@ -667,6 +698,7 @@ function personView(el, p) {
   }
   if (free(p) && p.status === "vrij") {
     btn(hard, "warn", "Warn", 1, S.mk < 1, "Frighten them. They become less defiant. Light touch.");
+    btn(hard, "verhoor", "Interrogate", 2, S.mk < 2 || p.pages < 10 || S.used["v" + p.id], S.used["v" + p.id] ? "Already questioned this turn." : p.pages < 10 ? `You need something to hold against them (file ≥ 10 pages, now ${p.pages}).` : `Kreisdienststelle, room 4. Catch them in a lie. Interrogation ${sk("verh")}.`);
     btn(hard, "arrest", "Arrest", 2, S.mk < 2 || !evidence(p), evidence(p) ? "Counts as a result. The heaviest measure." : `Needs 2 confirmed suspicious traits (now ${susCount(p)}).`);
   }
   const levs = Object.keys(p.known).filter(t => TRAITS[t] && TRAITS[t].lev);
@@ -686,12 +718,14 @@ function personView(el, p) {
       <label class="sel">Give an assignment (1 MP): <select id="assignSel"><option value="">— choose a neighbour or colleague —</option>${targets.map(q => `<option value="${q.id}">${esc(q.name)}</option>`).join("")}</select></label>
       <div class="acts"><button class="act" data-a="treff"><b>Treff in „Linde“</b><span>meet, pay, press or cross-check</span></button><button class="act" data-a="drop"><b>Drop</b><span>0 MP</span></button></div></div>`;
   }
+  const er = S.errands.find(x => x.pid === p.id);
+  const erBox = er ? (() => { const E = ERRANDS[er.k], ok = E.need ? (S.inv[E.need] || 0) > 0 : S.mk >= (E.mp || 0); return `<div class="box"><div class="kicker">Favour asked · ${er.due - S.t + 1} turn${er.due - S.t ? "s" : ""} left</div><div class="clue">${esc(E.ask)}</div><div class="acts one"><button class="act" data-a="errand" ${ok ? "" : "disabled"}><b>${esc(E.t)} <em>${E.need ? `1×` : `${E.mp} MP`}</em></b><span>${E.need ? `Costs 1 ${esc(INV[E.need][0])} (you have ${S.inv[E.need] || 0}). ` : ""}${ok ? "Do it. They will owe you: easier to recruit, and the district hears about it." : E.need ? `You have no ${esc(INV[E.need][0])}.` : "Not enough manpower."}</span></button></div></div>`; })() : "";
   el.innerHTML = `<div class="ph"><div><div class="kicker">Akte ${4000 + S.people.indexOf(p) * 37}/85 · ${p.pages} pages</div><h2>${esc(p.name)}</h2><div class="who">${esc(p.job)}, ${p.age}</div></div><div class="stampS">${p.complete ? "VOLLSTÄNDIG" : p.status === "vrij" ? "" : esc((STATUS_L[p.status] || p.status).toUpperCase())}</div></div>
    ${p.secretIM ? "" : `<div class="compl"><span>File complete</span><div class="cbar"><i style="width:${pct}%"></i></div><b>${pct}%</b></div>`}
    <div class="grid2"><div><small>Lives at</small><a data-b="${b.id}">${esc(b.name)}</a></div><div><small>Works at</small>${p.work && Bd(p.work) ? `<a data-b="${p.work}">${esc(work)}</a>` : esc(work)}</div><div><small>How defiant?</small>${hostility(p)}</div><div><small>Status</small>${esc(STATUS_L[p.status] || p.status)}</div></div>
    ${p.secretIM ? `<div class="box"><div class="clue">Card ‘gesperrt’: access for the Hauptabteilung only. This person is not available for measures.</div></div>` : ""}
    <div class="advice">${personAdvice(p)}</div>
-   ${caseBox}${imBox}
+   ${erBox}${caseBox}${imBox}
    <div class="kicker">What you know</div><ul class="traits">${known}</ul>${p.secretIM ? "" : linkHTML}
    ${p.secretIM ? "" : `${info.length ? `<div class="kicker">Gather information</div><div class="acts">${info.join("")}</div>` : ""}${hard.length ? `<div class="kicker">Intervene</div><div class="acts">${hard.join("")}</div>` : ""}`}
    ${recruitable ? (() => { const how = bestLever(p); const pct = Math.round(recruitChance(p, how) * 100); return `<div class="kicker">Make an informer <small class="muted">· ${imCount()}/${r.ims}</small></div><div class="acts one"><button class="act" data-a="recruit" data-h="${how}" ${S.mk < 1 || imCount() >= r.ims ? "disabled" : ""}><b>Recruit as IM <em>1 MP · ${pct}% chance</em></b><span>${how !== "gunst" ? `Leverage: ${esc(trLabel(how).toLowerCase())}.` : "Without leverage the chance is small. Observe first."} An IM informs on a neighbour every turn.</span></button></div>`; })() : ""}
@@ -704,6 +738,8 @@ function personView(el, p) {
     if (a === "recruit") return ACT.recruit(p, bt.dataset.h);
     if (a === "drop") return ACT.drop(p);
     if (a === "treff") return treffView(p);
+    if (a === "errand") return doErrand(p);
+    if (a === "verhoor") return interrogate(p);
     ACT[a](p);
   });
   const sel = el.querySelector("#assignSel"); if (sel) sel.onchange = () => { if (sel.value) ACT.assign(p, P(sel.value)); };
@@ -721,7 +757,7 @@ function buildingView(el, id) {
   const inside = INSIDE[id] && !(IX && IX.bid === id);
   el.innerHTML = `<div class="kicker">${b.res ? "Residential" : "Workplace"}</div><h2>${esc(b.name)}</h2><p class="who">${esc(b.desc)}</p>
     ${inside ? `<div class="acts one"><button class="act in" id="goIn"><b>${b.res ? "Into the stairwell" : "Go inside"} <em>free</em></b><span>${{ kollwitz: "Letterboxes, the Hausbuch, your own flat.", lychener: "The Hausbuch, and the Konspirative Wohnung „Linde“ on the third floor.", greif: "Letterboxes, the Hausbuch, the lift.", dimi: "Letterboxes, the Hausbuch, thin walls.", cafe: "Listen in at the tables. Talk to the barman.", konsum: "Queues, gossip and Bückware under the counter." }[id]}</span></button></div>` : ""}
-    <div class="acts"><button class="act ${S.bugs[id] ? "danger" : ""}" id="bugBtn" ${!S.bugs[id] && (S.mk < 2 || pool() >= r.bugs) ? "disabled" : ""}><b>${S.bugs[id] ? "Remove bugs" : "Plant bugs"}</b><span>${S.bugs[id] ? "frees the equipment" : `2 MP · bugged conversations every turn · ${pool()}/${r.bugs} in use`}</span></button></div>
+    <div class="acts"><button class="act ${S.bugs[id] ? "danger" : ""}" id="bugBtn" ${!S.bugs[id] && (S.mk < 2 || pool() >= bugCap()) ? "disabled" : ""}><b>${S.bugs[id] ? "Remove bugs" : "Plant bugs"}</b><span>${S.bugs[id] ? "frees the equipment" : `2 MP · bugged conversations every turn · ${pool()}/${bugCap()} in use`}</span></button></div>
     ${res.length ? `<div class="kicker">Residents</div>${res.map(p => personRow(p)).join("")}` : ""}
     ${wrk.length ? `<div class="kicker">Works here</div>${wrk.map(p => personRow(p)).join("")}` : ""}`;
   el.querySelector("#bugBtn").onclick = () => ACT.bug(id);
@@ -849,10 +885,12 @@ function familyView(el) {
 function calendarView(el) {
   const q = S.quota, r = rank(), nr = RANKS[S.rank + 1];
   el.innerHTML = `<div class="kicker">Annual targets ${turn().y}</div><h2>Kessler's expectations</h2>
-   <div class="grid2"><div><small>Results</small>${S.res} / ${q.res}</div><div><small>Active IMs</small>${imCount()} / ${q.ims}</div><div><small>Rank</small>${esc(r.id)}</div><div><small>Next rank</small>${nr ? `${esc(nr.id)}${nr.unlock ? " (" + esc(nr.unlock) + ")" : ""}` : "—"}</div></div>
-   <p class="who">You earn results by solving cases, arresting enemies of the state or ‘zersetzing’ them, and through some decisions. At the end of every year comes the annual assessment. Meet both targets: promotion.</p>
-   <div class="kicker">By rank</div><ul class="traits">${RANKS.map((x, i) => `<li class="${i === S.rank ? "" : "muted"}">${x.id}: ${x.mk} manpower, ${x.ims} IMs, ${x.bugs} bugging sets</li>`).join("")}</ul>
+   <div class="grid2"><div><small>Results</small>${S.res} / ${q.res}</div><div><small>Active IMs</small>${imCount()} / ${q.ims}</div><div><small>Rank</small>${esc(r.id)}</div><div><small>Next rank</small>${nr ? `${esc(nr.id)} at ${nr.xp} XP` : "—"}</div></div>
+   <p class="who">You earn results by solving cases, arresting enemies of the state or ‘zersetzing’ them, and through some decisions. At the end of every year comes the annual assessment: meet both targets for a bonus of ${XP.review} XP. Promotion comes with experience (XP).</p>
+   <div class="acts one"><button class="act" id="kad"><b>Your Kaderakte <em>${S.xp} XP</em></b><span>Rank, skills, reputation and the favours you promised.</span></button></div>
+   <div class="kicker">By rank</div><ul class="traits">${RANKS.map((x, i) => `<li class="${i === S.rank ? "" : "muted"}">${x.id} (${x.xp} XP): ${x.mk} manpower, ${x.ims} IMs, ${x.bugs} bugging sets</li>`).join("")}</ul>
    <div class="kicker">Rival</div><p class="who">${S.flags.fuchsMet ? `Oberleutnant Fuchs: ${S.fuchs >= 50 ? "openly hostile" : S.fuchs >= 25 ? "on his guard" : "polite"}.` : "None yet."}</p>`;
+  el.querySelector("#kad").onclick = () => sheet(kaderView);
 }
 
 function phoneTap() {
@@ -873,7 +911,9 @@ function showHelp() {
 <b>Street</b>: tap a passer-by to talk. Tap the phone box or the Litfaßsäule.
 <b>Inside</b>: residential buildings, Café Mosaik and the Kaufhalle have a <b>Go inside</b> button.
 <b>Pinboard</b>: red threads between residents. A complete file is stamped VOLLSTÄNDIG.
-<b>Treff</b>: meet informers in the Konspirative Wohnung (Lychener Straße 40). Keep them loyal.</div>
+<b>Treff</b>: meet informers in the Konspirative Wohnung (Lychener Straße 40). Keep them loyal.
+<b>Kaderakte</b>: tap your rank at the top. XP brings promotion and skill points. Skills raise the chances shown in %.
+<b>Interrogate</b> (2 MP): find the lie in someone's story. <b>Favours</b>: people on the street sometimes ask you for one.</div>
 <button class="next" id="nx">OK</button><button class="next ghost" id="hb">Handbook: allowed or not, and the history</button><button class="next ghost" id="snd">Sound: ${soundOn() ? "on" : "off"}</button><button class="next ghost" id="ri">Tutorial again</button>`, m => { m.querySelector("#nx").onclick = closeModal; m.querySelector("#ri").onclick = showIntro; m.querySelector("#hb").onclick = () => handbook("regels", showHelp); m.querySelector("#snd").onclick = () => { setSound(!soundOn()); showHelp(); }; });
 }
 
@@ -923,7 +963,7 @@ const DAILY = ["carries a string bag with three cucumbers and a jar of Spreewald
 function gossip(srcName, sure) {
   const c = S.people.filter(q => free(q) && !q.secretIM && q.traits.some(t => !q.known[t] && GOSSIP[t]));
   const q = rand(c); if (!q) return { line: "‘Nothing happens here, comrade. Nothing at all.’" };
-  const truth = sure || R() < 0.7;
+  const truth = sure || R() < 0.7 + sk("obs") * 0.05 + (S.rep.buurt - 50) / 500;
   let t = truth ? rand(q.traits.filter(t => !q.known[t] && GOSSIP[t])) : rand(FAKEABLE.filter(t => !q.traits.includes(t) && !q.known[t] && GOSSIP[t]));
   if (!t) t = rand(q.traits.filter(t => !q.known[t] && GOSSIP[t]));
   q.known[t] = { s: sure ? "zeker" : "talk" }; q.pages += 1; if (sure) discoverLinks();
@@ -938,20 +978,105 @@ function walkerCard(i) {
     return modal(`<div class="kicker">On the street</div><h1>${w.anon === "vopo" ? "Volkspolizei" : w.anon === "stasi" ? "A colleague?" : "A passer-by"}</h1><div class="result">${esc(t)}</div><button class="next" id="nx">Walk on</button>`, m => m.querySelector("#nx").onclick = () => { closeModal(); world.selectWalker(null); });
   }
   const mood = p.status === "im" ? `IM „${p.code}“. Nods at you, a fraction too quickly.` : p.fear > 40 ? "Sees you and crosses the street." : p.dis > 50 ? "Looks straight through you." : `${p.fn} ${rand(DAILY)}`;
-  const talked = S.talked[p.id];
+  const talked = S.talked[p.id], er = S.errands.find(x => x.pid === p.id);
   modal(`<div class="kicker">On the street · ${esc(Bd(p.home).name)}</div><h1>${esc(p.name)}</h1><div class="who">${esc(p.job)}, ${p.age}</div><div class="result">${esc(mood)}</div>
-    <div class="choices"><button class="ch" id="chat" ${talked ? "disabled" : ""}><b>Small talk</b><span>${talked ? "Already spoke this turn." : "Free. People talk about their neighbours."}</span></button>
-    <button class="ch" id="cof" ${!S.inv.kaffee || talked ? "disabled" : ""}><b>Offer West coffee</b><span>${S.inv.kaffee ? `You have ${S.inv.kaffee}. Buys a true story.` : "You have no West coffee."}</span></button>
+    ${er ? `<p class="note">${esc(p.fn)} is still waiting for the favour you promised: ${esc(ERRANDS[er.k].t.toLowerCase())}.</p>` : ""}
+    <div class="choices"><button class="ch" id="talk" ${talked ? "disabled" : ""}><b>Talk to ${obj(p)}</b><span>${talked ? "Already spoke this turn." : S.rep.buurt < 20 ? "The district has turned cold on you. Hard going." : "Free. You choose how to play it."}</span></button>
     <button class="ch" id="fol" ${S.mk < 1 ? "disabled" : ""}><b>Follow ${obj(p)}</b><span>1 MP · the same as Observe</span></button>
-    <button class="ch" id="fil"><b>Open the file</b><span>${p.pages} pages · ${completion(p)}% complete</span></button></div>`, m => {
+    <button class="ch" id="fil"><b>Open the file</b><span>${p.pages} pages · ${completion(p)}% complete${er ? " · favour waiting" : ""}</span></button></div>`, m => {
     const end = () => { world.selectWalker(null); };
-    const talk = sure => { S.talked[p.id] = true; if (sure) invAdd("kaffee", -1); const g = gossip(p.name, sure); save(); refresh(); sfx.paper();
-      modal(`<div class="kicker">${esc(p.name)} talks</div><h1>${sure ? "Over coffee" : "Small talk"}</h1><div class="report">${esc(g.line)}</div>${g.q ? `<p class="note">${sure ? "Confirmed" : "Gossip, unconfirmed"}: ${esc(g.q.name)} · ${esc(trLabel(g.t).toLowerCase())}. ${sure ? "" : "Observe to check it."}</p>` : ""}<button class="next" id="nx">OK</button>${g.q ? `<button class="next ghost" id="op">Open file ${esc(g.q.name)}</button>` : ""}`, m2 => { m2.querySelector("#nx").onclick = () => { closeModal(); end(); }; const o = m2.querySelector("#op"); if (o) o.onclick = () => { closeModal(); end(); sheet(e => personView(e, g.q)); }; }); };
-    m.querySelector("#chat").onclick = () => talk(false);
-    m.querySelector("#cof").onclick = () => talk(true);
+    m.querySelector("#talk").onclick = () => talkMenu(p, end);
     m.querySelector("#fol").onclick = () => { closeModal(); end(); sheet(e => personView(e, p)); ACT.observe(p); };
     m.querySelector("#fil").onclick = () => { closeModal(); end(); sheet(e => personView(e, p)); };
   });
+}
+// gesprek op straat: één keuze, met vaardigheidscheck in procenten
+function talkMenu(p, end) {
+  const cAsk = talkChance(p, "ueb", 50), cPress = talkChance(p, "verh", 40), cold = S.rep.buurt < 20;
+  const own = p.traits.filter(t => !conf(p, t) && TRAITS[t] && !TRAITS[t].tw);
+  modal(`<div class="kicker">${esc(p.name)} · how do you play it?</div><h1>A word on the street</h1><div class="result">District ${repWord(S.rep.buurt)}${churchy(p) ? ` · church ${repWord(S.rep.kerk)}` : ""}${p.owes ? ` · ${esc(p.fn)} owes you` : ""}.</div>
+    <div class="choices">
+    <button class="ch" data-c="chat"><b>Small talk <em class="pct">free</em></b><span>${cold ? "People change the subject when you come near." : "Neighbours talk about neighbours. Gossip, unconfirmed."}</span></button>
+    <button class="ch" data-c="ask"><b>Ask about the neighbours <em class="pct">${cAsk}%</em></b><span>Persuasion ${sk("ueb")}. Success: something true about someone else. Failure: ${pron(p)} grows wary.</span></button>
+    <button class="ch" data-c="press" ${own.length ? "" : "disabled"}><b>Ask for ${p.sex === "f" ? "her" : "his"} papers <em class="pct">${cPress}%</em></b><span>${own.length ? `Interrogation ${sk("verh")}. Success: ${pron(p)} lets something slip about ${obj(p)}self. Failure: the whole street saw it.` : "Nothing left to find out this way."}</span></button>
+    <button class="ch" data-c="cof" ${S.inv.kaffee ? "" : "disabled"}><b>Offer West coffee <em class="pct">sure</em></b><span>${S.inv.kaffee ? `You have ${S.inv.kaffee}. Buys a true story about a neighbour.` : "You have no West coffee."}</span></button>
+    <button class="ch" data-c="dm" ${S.inv.dm && own.length ? "" : "disabled"}><b>Slip ${obj(p)} 50 DM <em class="pct">sure</em></b><span>${S.inv.dm ? `A bribe in Westgeld (${S.inv.dm} left). ${pron(p).replace(/^./, c => c.toUpperCase())} tells you something about ${obj(p)}self. Suspicion +1.` : "You have no Westgeld."}</span></button>
+    </div><button class="next ghost" id="bk">Walk on</button>`, m => {
+    m.querySelector("#bk").onclick = () => { closeModal(); end(); };
+    m.querySelectorAll("[data-c]").forEach(b => b.onclick = () => {
+      const c = b.dataset.c; S.talked[p.id] = true; sfx.paper(); let h = "", body = "", note = "", e = {}, g = null;
+      if (c === "chat") { if (cold && R() < 0.7) body = "‘Weather's turning.’ That is all you get."; else { g = gossip(p.name, false); } h = "Small talk"; }
+      if (c === "cof") { invAdd("kaffee", -1); g = gossip(p.name, true); h = "Over coffee"; e = { bu: 1 }; }
+      if (c === "ask") { h = "Asking around"; if (R() * 100 < cAsk) { g = gossip(p.name, true); e = { xp: XP.talk }; note = "✓ Check passed"; } else { p.dis = Math.min(95, p.dis + 4); body = `‘Why do you want to know?’ ${Pron(p)} looks at you a moment too long and goes inside.`; e = { bu: -2 }; note = "✗ Check failed"; } }
+      if (c === "press") { h = "Your papers, please"; if (R() * 100 < cPress) { const t = rand(own); p.known[t] = { s: "zeker" }; p.pages += 2; p.fear += 8; discoverLinks(); body = `${Pron(p)} fumbles with the Ausweis, talks too much, and says more than intended.\n\n✓ ${trLabel(t)}`; e = { xp: XP.talk, c: -1 }; note = "✓ Check passed"; } else { p.fear += 10; p.dis = Math.min(95, p.dis + 6); body = "The papers are in order. Two women at the tram stop watched the whole thing."; e = { bu: -3, c: -1 }; note = "✗ Check failed"; } }
+      if (c === "dm") { invAdd("dm", -1); const t = rand(own); p.known[t] = { s: "zeker" }; p.pages += 2; discoverLinks(); body = `The envelope vanishes into a coat pocket. Then, quietly:\n\n✓ ${trLabel(t)}`; e = { d: 1 }; }
+      if (g) body = g.line + (g.q ? `\n\n${g.sure ? "Confirmed" : "Gossip, unconfirmed"}: ${g.q.name} · ${trLabel(g.t).toLowerCase()}.${g.sure ? "" : " Observe to check it."}` : "");
+      // soms vraagt iemand je om een gunst (bijmissie)
+      const offer = !S.errands.find(x => x.pid === p.id) && S.errands.length < 3 && p.status === "vrij" && !p.owes && !p.family && S.rep.buurt >= 20 && R() < 0.35 ? errandFor(p, R) : null;
+      applyE(e); save(); refresh();
+      modal(`<div class="kicker">${esc(p.name)} talks${note ? " · " + note : ""}</div><h1>${esc(h)}</h1><div class="report">${esc(body)}</div>${chips(e)}
+        ${offer ? `<div class="box"><div class="kicker">Before you go</div><div class="clue">${esc(ERRANDS[offer].ask)}</div></div><div class="choices"><button class="ch" id="yes"><b>‘I'll see what I can do.’</b><span>A favour (3 turns). Do it and ${pron(p)} owes you.</span></button><button class="ch" id="no"><b>‘Not my department.’</b></button></div>` : `<button class="next" id="nx">OK</button>`}
+        ${g && g.q ? `<button class="next ghost" id="op">Open file ${esc(g.q.name)}</button>` : ""}`, m2 => {
+        const nx = m2.querySelector("#nx"); if (nx) nx.onclick = () => { closeModal(); end(); };
+        const y = m2.querySelector("#yes"); if (y) y.onclick = () => { S.errands.push({ pid: p.id, k: offer, due: S.t + 2 }); addLog(p, `Asked a favour: ${ERRANDS[offer].t.toLowerCase()}`); save(); closeModal(); end(); toast(`Favour noted in ${esc(p.name)}'s file. Open the file to do it.`); };
+        const n = m2.querySelector("#no"); if (n) n.onclick = () => { closeModal(); end(); };
+        const o = m2.querySelector("#op"); if (o) o.onclick = () => { closeModal(); end(); sheet(e2 => personView(e2, g.q)); };
+      });
+    });
+  }, { lock: true });
+}
+function doErrand(p) {
+  const er = S.errands.find(x => x.pid === p.id); if (!er) return; const E = ERRANDS[er.k];
+  if (E.need) { if (!S.inv[E.need]) return toast(`You have no ${INV[E.need][0]}.`); invAdd(E.need, -1); } else if (!spend(E.mp)) return;
+  S.errands = S.errands.filter(x => x !== er); p.owes = true; p.fear = Math.max(0, p.fear - 10); p.dis = Math.max(0, p.dis - 6); p.loyal = Math.min(100, (p.loyal || 0) + 10);
+  S.stats.errands = (S.stats.errands || 0) + 1; addLog(p, `You did them a favour: ${E.t.toLowerCase()}`); sfx.good();
+  const t = rand(p.traits.filter(t => !conf(p, t) && TRAITS[t] && !TRAITS[t].tw)); if (t) { p.known[t] = { s: "zeker" }; p.pages += 2; discoverLinks(); }
+  if (S.stats.errands >= 4) medal("helfer");
+  after(`<h1>Favour: ${esc(E.t)}</h1><div class="result">${esc(E.done)}${t ? `\n\nGrateful, ${esc(p.fn)} tells you more than ${pron(p)} should.\n✓ ${esc(trLabel(t))}` : ""}\n\n${esc(p.fn)} owes you now. Recruiting ${obj(p)} will be easier.</div>`, { ...(E.e || {}), xp: XP.quest, bu: 5, ki: churchy(p) ? 4 : 0 });
+}
+// ---------- verhoor (Befragung) ----------
+function interrogate(p) {
+  if (!spend(2)) return; S.used["v" + p.id] = 1; tutDone(99);
+  const known = p.traits.filter(t => conf(p, t));
+  const nb = rand(S.people.filter(q => q !== p && (q.home === p.home || q.work === p.work)));
+  const story = buildStory(p, known, nb && nb.name, R);
+  const file = known.filter(t => TRAITS[t] && !TRAITS[t].tw).map(trLabel);
+  const kas = (S.inv.kas || 0) > 0, lives = 1 + Math.floor(sk("verh") / 2) + (kas ? 1 : 0);
+  addLog(p, "Questioned at the Kreisdienststelle");
+  playMinigame("verhoor", mgUI, { kicker: `Befragung · Interrogation ${sk("verh")}${kas ? " · cassette running" : ""}`, name: p.name, story, file, time: 30 + sk("verh") * 4, lives }, res => {
+    closeModal(); const base = lives - (kas ? 1 : 0); let kasNote = "";
+    if (kas && (res.used || 0) >= base) { invAdd("kas", -1); kasNote = "\n\n(You replayed the cassette to catch your mistake. It is used up.)"; }
+    if (res.ok) {
+      const unk = p.traits.filter(t => !conf(p, t) && TRAITS[t]); const got = [];
+      for (let k = 0; k < 2 && unk.length; k++) { const t = unk.splice(Math.floor(R() * unk.length), 1)[0]; p.known[t] = { s: "zeker" }; got.push(t); }
+      p.fear += 20; p.dis = Math.max(0, p.dis - 8); p.pages += 8;
+      const conf2 = S.case && S.case.culprit === p.id; if (conf2) S.case.geur[p.id] = true;
+      discoverLinks();
+      return after(`<h1>${esc(p.name)} breaks</h1><div class="result">‘${esc(story.lines[story.lie])}’ You read it back. Then you read the other line back.${got.length ? "\n\n" + got.map(t => "✓ " + esc(trLabel(t))).join("\n") : "\n\nThere was nothing more to find."}${conf2 ? "\n\nAnd then, unasked: the leaflets. The case file now marks " + esc(p.fn) + "." : ""}${kasNote}</div>`, { c: -3, xp: XP.verhoor, bu: -1 });
+    }
+    if (res.skipped) return after(`<h1>Let go</h1><div class="result">You close the folder. ‘You may go.’ ${esc(p.fn)} doesn't believe it until the door opens.</div>`, { c: 1 });
+    p.dis = Math.min(95, p.dis + 8); p.fear += 10;
+    after(`<h1>Nothing</h1><div class="result">Three hours, two ashtrays. ${esc(p.fn)} walks out with the same story ${pron(p)} came in with, and a new reason to hate you.</div>`, { c: -3, bu: -2, ki: churchy(p) ? -2 : 0 });
+  });
+}
+// ---------- Kaderakte: rang, vaardigheden, reputatie, gunsten ----------
+function kaderView(el) {
+  const r = rank(), nr = RANKS[S.rank + 1], pts = points();
+  const prog = nr ? Math.round((S.xp - r.xp) / (nr.xp - r.xp) * 100) : 100;
+  const dots = n => "●".repeat(n) + "○".repeat(SK_MAX - n);
+  el.innerHTML = `<div class="kicker">Kaderakte · your personnel file</div><h2>${esc(r.id)}</h2>
+    <div class="compl"><span>${nr ? `To ${esc(nr.id)}` : "Highest rank"}</span><div class="cbar"><i style="width:${Math.max(0, Math.min(100, prog))}%"></i></div><b>${S.xp} XP</b></div>
+    <p class="muted small">${nr ? `${nr.xp - S.xp} XP to go. ` : ""}XP from observations, reports, cases, complete files, recruits, favours and the annual assessment. Every ${XP_PER_POINT} XP: one skill point.</p>
+    <div class="kicker">Skills <small class="muted">· ${pts ? `<b class="red">${pts} point${pts > 1 ? "s" : ""} to spend</b>` : "no points to spend"}</small></div>
+    <div class="acts one">${Object.entries(SKILLS).map(([k, v]) => `<button class="act sk" data-sk="${k}" ${!pts || sk(k) >= SK_MAX ? "disabled" : ""}><b>${esc(v.t)} <em>${dots(sk(k))}</em></b><span>${esc(v.d)}${pts && sk(k) < SK_MAX ? " Tap: train (+1)." : ""}</span></button>`).join("")}</div>
+    <div class="kicker">Reputation</div>
+    <div class="reps">${Object.entries(REP).map(([k, v]) => `<div class="rep"><small>${esc(v.t)}</small>${bar10(repV(k))}<span>${repWord(repV(k))}</span></div>`).join("")}</div>
+    <p class="muted small">${esc(REP.buurt.d)} ${esc(REP.kerk.d)}</p>
+    <div class="kicker">Favours you promised <small class="muted">· ${S.errands.length}/3</small></div>
+    ${S.errands.map(x => { const p = P(x.pid); return `<button class="row" data-pid="${p.id}"><span class="rn"><b>${esc(p.name)}</b><small>${esc(ERRANDS[x.k].t)}</small></span><span class="rp">${x.due - S.t + 1}<small> t. left</small></span></button>`; }).join("") || "<p class='muted small'>None. Talk to people in the street; sometimes they ask you for something.</p>"}
+    <div class="kicker">Equipment</div><p class="who">${pool()}/${bugCap()} bugging sets in use${S.inv.minox ? " · Minox camera" : ""}${S.inv.kas ? ` · ${S.inv.kas} cassette${S.inv.kas > 1 ? "s" : ""}` : ""}. More from the strongbox: Requisition.</p>`;
+  el.querySelectorAll("[data-sk]").forEach(b => b.onclick = () => { const k = b.dataset.sk; if (points() <= 0 || sk(k) >= SK_MAX) return; S.sk[k]++; S.spent++; sfx.stamp(); save(); refresh(); rerender(); toast(`<b>${esc(SKILLS[k].t)}</b> ${sk(k)}/${SK_MAX}`); });
+  bindRows(el);
 }
 
 // ---------- binnenruimtes ----------
@@ -1092,7 +1217,7 @@ function boothCall() {
     ${cand.map(p => `<button class="ch" data-w="${p.id}" ${p.warned === S.t ? "disabled" : ""}><b>Warn ${esc(p.name)}, anonymously</b><span>‘Be careful. They are watching you.’ They become less defiant and harder to catch. Conscience +5, but it is a risk.</span></button>`).join("")}
     <button class="ch" id="no"><b>Hang up</b></button></div>`, m => {
     m.querySelector("#home").onclick = () => { S.used.callHome = 1; closeModal(); after(null, { fam: 2 }); toast("Katrin: ‘Again? Fine.’"); };
-    m.querySelectorAll("[data-w]").forEach(b => b.onclick = () => { const p = P(b.dataset.w); p.warned = S.t; p.fear += 15; p.dis = Math.max(0, p.dis - 10); Object.keys(p.known).forEach(t => { if (p.known[t].s !== "zeker") delete p.known[t]; }); S.warned.push({ id: p.id, t: S.t }); addLog(p, "Received an anonymous warning call"); closeModal(); evCtx = "an anonymous call from a phone box"; after(`<h1>Click</h1><div class="result">A short silence on the line. Then: ‘Who is this?’ You hang up.</div>`, { c: 5, d: R() < 0.5 ? 4 : 0 }); evCtx = ""; });
+    m.querySelectorAll("[data-w]").forEach(b => b.onclick = () => { const p = P(b.dataset.w); p.warned = S.t; p.fear += 15; p.dis = Math.max(0, p.dis - 10); Object.keys(p.known).forEach(t => { if (p.known[t].s !== "zeker") delete p.known[t]; }); S.warned.push({ id: p.id, t: S.t }); addLog(p, "Received an anonymous warning call"); closeModal(); evCtx = "an anonymous call from a phone box"; after(`<h1>Click</h1><div class="result">A short silence on the line. Then: ‘Who is this?’ You hang up.</div>`, { c: 5, d: R() < 0.5 - sk("geh") * 0.08 ? 4 : 0, ki: churchy(p) ? 3 : 0 }); evCtx = ""; });
     m.querySelector("#no").onclick = closeModal;
   });
 }
@@ -1108,6 +1233,7 @@ function treffView(im) {
   if (!IX || IX.kind !== "kw") { enterInterior("kw", "lychener"); }
   sheet(el => {
     const done = S.used["t" + im.id], item = { dm: "dm", kaffee: "kaffee" }[im.need], have = item ? S.inv[item] : 0;
+    const cProbe = pc(35 + sk("verh") * 10 + (im.fear || 0) / 4), cWin = pc(40 + sk("ueb") * 10 - (im.lies || 0) * 5);
     const claims = Object.entries(S.people.reduce((a, q) => { Object.entries(q.known).forEach(([t, k]) => { if (k.s === "IM" && k.im === im.id) a[q.id + ":" + t] = 1; }); return a; }, {})).length;
     el.innerHTML = `<div class="kicker">Treff · „Linde“</div><h2>IM „${esc(im.code)}“</h2><div class="who">${esc(im.name)}, ${esc(im.job)}</div>
       <div class="grid2"><div><small>Loyalty</small>${bar10(im.loyal || 0)}</div><div><small>Fear</small>${bar10(Math.min(100, im.fear || 0))}</div><div><small>Wants</small>${esc(NEEDS[im.need] || "?")}</div><div><small>Unchecked claims</small>${claims}</div></div>
@@ -1117,6 +1243,9 @@ function treffView(im) {
         <button class="act" data-t="buck" ${done || !S.inv.buck ? "disabled" : ""}><b>Give Bückware <em>${S.inv.buck || 0} left</em></b><span>A small present. Loyalty +10.</span></button>
         <button class="act" data-t="press" ${done ? "disabled" : ""}><b>Press <em>free</em></b><span>Threaten. One extra report next turn, but they will lie more and like you less.</span></button>
         <button class="act" data-t="check" ${done || S.mk < 1 || !claims ? "disabled" : ""}><b>Cross-check <em>1 MP</em></b><span>Lay their reports next to what bugs and other IMs say. Catches lies.</span></button>
+        <button class="act" data-t="probe" ${done ? "disabled" : ""}><b>Probe their story <em>${cProbe}%</em></b><span>Interrogation ${sk("verh")}. Free. Success: one claim checked, or a double game exposed. Failure: loyalty −5.</span></button>
+        <button class="act" data-t="win" ${done ? "disabled" : ""}><b>Win them over <em>${cWin}%</em></b><span>Persuasion ${sk("ueb")}. Free. Success: loyalty +18. Failure: they see through you.</span></button>
+        <button class="act" data-t="rec" ${done || im.held || !S.inv.kas ? "disabled" : ""}><b>Record the meeting <em>${S.inv.kas || 0} cassette${S.inv.kas === 1 ? "" : "s"}</em></b><span>${im.held ? "You already have them on tape." : "Kompromat. Loyalty falls half as fast and they will never turn double."}</span></button>
       </div>`;
     el.querySelectorAll("[data-t]").forEach(b => b.onclick = () => {
       const t = b.dataset.t; S.used["t" + im.id] = 1; im.lastTreff = S.t; let msg = "", e = {};
@@ -1124,6 +1253,13 @@ function treffView(im) {
       if (t === "buck") { invAdd("buck", -1); im.loyal = clamp((im.loyal || 0) + 10); msg = `${im.fn} puts it in a string bag. ‘My children have never seen one of these.’`; }
       if (t === "press") { im.fear = (im.fear || 0) + 20; im.loyal = clamp((im.loyal || 0) - 10); im.honesty = Math.max(10, im.honesty - 8); im.extra = 1; e = { c: -3 }; msg = `You mention the Kaderakte. ${im.fn}'s hands start to shake. ‘I'll bring more. I promise.’`; }
       if (t === "check") { if (!spend(1)) return; const out = []; S.people.forEach(q => Object.entries(q.known).forEach(([tr, k]) => { if (k.s === "IM" && k.im === im.id) { if (q.traits.includes(tr)) { q.known[tr] = { s: "zeker" }; out.push(`✓ ${q.name}: ${trLabel(tr)}`); } else { delete q.known[tr]; im.lies = (im.lies || 0) + 1; out.push(`✗ ${q.name}: ‘${trLabel(tr)}’ was a lie`); } } })); if (im.doubleAgent && R() < 0.6) { im.known.dubbel = { s: "zeker" }; out.push("! The way they answer: this informer is working for both sides."); } discoverLinks(); msg = out.join("\n") || "Everything checks out."; }
+      if (t === "probe") { if (R() * 100 < cProbe) { const cl = []; S.people.forEach(q => Object.entries(q.known).forEach(([tr, k]) => { if (k.s === "IM" && k.im === im.id) cl.push([q, tr]); })); im.honesty = Math.min(100, im.honesty + 5);
+          if (im.doubleAgent && !im.known.dubbel && R() < 0.5) { im.known.dubbel = { s: "zeker" }; msg = "✓ The dates don't fit. You push, and it all comes out: they have been talking to the other side."; }
+          else if (cl.length) { const [q, tr] = rand(cl); if (q.traits.includes(tr)) { q.known[tr] = { s: "zeker" }; msg = `✓ The details hold. ${q.name}: ${trLabel(tr)}. Confirmed.`; } else { delete q.known[tr]; im.lies = (im.lies || 0) + 1; msg = `✓ The details don't hold. ${q.name}: ‘${trLabel(tr)}’ was made up.`; } discoverLinks(); }
+          else msg = "✓ Their story is consistent. For now there is nothing to check.";
+          e = { xp: XP.talk }; } else { im.loyal = clamp((im.loyal || 0) - 5); msg = `✗ ${im.fn} goes quiet and looks at the clock. ‘Do you not trust me?’`; } }
+      if (t === "win") { if (R() * 100 < cWin) { im.loyal = clamp((im.loyal || 0) + 18); im.honesty = Math.min(100, im.honesty + 5); msg = `✓ You talk about their children, the Black Sea, the future. ${im.fn} leaves smiling.`; e = { xp: XP.talk }; } else { msg = `✗ ${im.fn} nods politely. It is obvious ${pron(im)} doesn't believe a word.`; } }
+      if (t === "rec") { invAdd("kas", -1); im.held = true; addLog(im, "Treff recorded on cassette"); msg = `The Smaragd recorder in the cupboard hums. ${im.fn} talks about the neighbours, about money, about a cousin in the Party. All on tape now.`; e = { c: -2 }; }
       sfx.paper(); after(`<h1>Treff: „${esc(im.code)}“</h1><div class="result">${esc(msg)}</div>`, e); interiorBadges();
     });
   });
@@ -1150,13 +1286,21 @@ function strongboxView(el) {
   const ms = medals();
   el.innerHTML = `<div class="kicker">Strongbox · key on your keyring</div><h2>Strongbox</h2>
     <div class="kicker">Contents</div><ul class="traits">${Object.entries(INV).map(([k, [n, d]]) => `<li><b>${S.inv[k] || 0}×</b> ${esc(n)} <span class="muted small">· ${esc(d)}</span></li>`).join("")}</ul>
-    <p class="muted small">Westgeld and coffee pay informers at a Treff (Konspirative Wohnung „Linde“, Lychener Straße 40). Coffee also loosens tongues on the street. New operative funds every January.</p>
+    <p class="muted small">Westgeld and coffee pay informers at a Treff (Konspirative Wohnung „Linde“, Lychener Straße 40), or buy a story on the street. New operative funds every January.</p>
+    <div class="kicker">Requisition · Abteilung 26 <small class="muted">· once per turn, costs Favour</small></div>
+    <div class="acts one">${REQ.map(q => { const ok = !S.used.req && q.ok(); return `<button class="act" data-rq="${q.k}" ${ok ? "" : "disabled"}><b>${esc(INV[q.k][0])} <em>Favour −${q.g}</em></b><span>${S.used.req ? "Already requisitioned this turn." : esc(q.why())}</span></button>`; }).join("")}</div>
     <div class="kicker">What they may have on you</div><p class="who">Suspicion ${S.dossier}. ${S.dossier >= 60 ? "Personnel are asking questions." : S.dossier >= 35 ? "Somebody is keeping notes." : "Nothing you need to worry about. Yet."}${S.homeBugs && S.homeBugs.found.length < S.homeBugs.spots.length ? " Something is wrong at home." : ""}</p>
     <ul class="log">${S.ownLog.slice(-8).reverse().map(l => `<li>${esc(l)}</li>`).join("") || "<li>(nothing yet)</li>"}</ul>
     <div class="kicker">Decorations <small class="muted">· ${ms.length} of ${Object.keys(MEDALS).length}, over all games</small></div>
     <div class="medals">${Object.entries(MEDALS).map(([k, m]) => `<div class="md${ms.includes(k) ? "" : " off"}"><i style="background:${m.col}"></i><b>${ms.includes(k) ? esc(m.t) : "???"}</b><small>${esc(m.d)}</small></div>`).join("")}</div>
     <p class="muted small">Game no. ${S.seed % 100000}${S.mods.length ? " · " + S.mods.map(m => MODS[m].t).join(", ") : ""}</p>`;
+  el.querySelectorAll("[data-rq]").forEach(b => b.onclick = () => { const q = REQ.find(x => x.k === b.dataset.rq); if (S.used.req || !q.ok()) return; S.used.req = 1; invAdd(q.k); sfx.drawer(); after(`<h1>Requisitioned</h1><div class="result">A form in triplicate, a signature, a cardboard box. ${esc(INV[q.k][0])}: ${esc(INV[q.k][1])}.</div>`, { g: -q.g }); });
 }
+const REQ = [
+  { k: "kas", g: 1, ok: () => true, why: () => "Record a Treff as kompromat, or replay an interrogation to catch your own mistake." },
+  { k: "set", g: 5, ok: () => sk("tech") >= 1 && (S.inv.set || 0) < 3, why: () => sk("tech") < 1 ? "Needs Technique 1. The technicians don't hand sets to amateurs." : (S.inv.set || 0) >= 3 ? "Abteilung 26 has no more for you." : `One more bug or tap at a time (now ${bugCap()}).` },
+  { k: "minox", g: 6, ok: () => S.rank >= 1 && !S.inv.minox, why: () => S.inv.minox ? "You already have one." : S.rank < 1 ? "For Oberleutnant and above." : "Every observation turns up at least two things." },
+];
 function radioTap() {
   const on = !world.__radio; world.__radio = on; world.setRadio(on); radioSound(on);
   if (!on) return toast("Radio off.");
@@ -1215,13 +1359,14 @@ function nextStep() {
   if (IX && IX.kind === "flat" && S.homeBugs && S.homeBugs.found.length < S.homeBugs.spots.length) return { text: "Tap the objects in your flat to search them for bugs." };
   const lowIM = S.people.find(p => p.status === "im" && S.t - (p.lastTreff ?? S.t) > 2 && !S.used["t" + p.id]);
   if (lowIM && S.t % 2 === 0 && !(IX && IX.kind === "kw")) return { text: `IM <b>„${esc(lowIM.code)}“</b> has not seen you for a while. Loyalty is dropping. Tap for a Treff.`, go: () => treffView(lowIM) };
+  if (points() > 0 && !$("#sheet").classList.contains("open")) return { text: `<b>${points()} skill point${points() > 1 ? "s" : ""}</b> to spend. Tap to open your Kaderakte.`, go: () => sheet(kaderView), target: "#rkBtn" };
   if (S.case && S.mk > 0) return { text: `<b>Case:</b> find the culprit (${S.case.turns} turn${S.case.turns > 1 ? "s" : ""} left). Tap for the suspects.`, go: () => sheet(caseView) };
   if (S.mk > 0) {
     const lev = S.people.find(p => p.status === "vrij" && !p.family && !p.secretIM && Object.keys(p.known).some(t => TRAITS[t] && TRAITS[t].lev && p.known[t].s === "zeker"));
     if (lev && imCount() < Math.min(rank().ims, S.quota.ims)) return { text: `You have leverage on <b>${esc(lev.name)}</b>. Recruit ${obj(lev)} as an informer (you have ${imCount()}/${S.quota.ims} of the IMs you need).`, go: () => sheet(e => personView(e, lev)) };
     const arr = S.people.find(p => p.status === "vrij" && !p.family && evidence(p) && p.dis >= 30);
     if (arr && S.mk >= 2 && S.res < S.quota.res) return { text: `You have enough evidence against <b>${esc(arr.name)}</b>. An arrest counts as a result. Or will you let it go?`, go: () => sheet(e => personView(e, arr)) };
-    if (pool() < rank().bugs && S.mk >= 2) return { text: `Plant <b>bugs</b> in a building (2 manpower): you will hear conversations every turn.`, go: () => setMode("district") };
+    if (pool() < bugCap() && S.mk >= 2) return { text: `Plant <b>bugs</b> in a building (2 manpower): you will hear conversations every turn.`, go: () => setMode("district") };
     return { text: `<b>${S.mk} manpower</b> left. Go to the district and observe someone you don't know yet.`, go: () => setMode("district") };
   }
   return { text: "<b>All done.</b> Tap here to end the turn.", go: () => confirmEnd(), target: "#navEnd" };

@@ -111,11 +111,13 @@ De belangrijkste blokjes zijn vervangen door echte low-poly modellen. Lukt het l
 - [x] Promotieceremonie met schouderstukken; minigames brief openstomen, bandrecorder, doka (`js/minigames.js`) als Überstunden (+1 MP), bij postcontrole en in de KW
 - [x] November 1989: kies welke dossiers je vernietigt; bepaalt de epiloog en je eigen dossier in 1992
 
-**RPG**
-- [ ] Ervaringspunten en vaardigheden (Observatie, Verhoor, Overtuigen, Techniek, Geheimhouding)
-- [ ] Gesprekskeuzes met vaardigheidschecks
-- [ ] Inventaris (Westgeld, koffie, cassettes, Minox, afluistersets) om informanten te betalen of om te kopen
-- [ ] Reputatie (MfS, buurt, kerk, gezin) en bijmissies per bewoner
+**RPG (fase 3E, 18 nov)**
+- [x] Ervaringspunten (XP) uit observaties, rapporten, zaken, complete dossiers, werving, gunsten en de jaarbeoordeling; bevordering via XP, vijfde rang Oberstleutnant
+- [x] Vaardigheden (Observatie, Verhoor, Overtuigen, Techniek, Geheimhouding), elke 40 XP een punt, in de Kaderakte (tik op je rang)
+- [x] Gesprekskeuzes met vaardigheidscheck in procenten op straat en bij een Treff
+- [x] Verhoor-minigame: vind de leugen in iemands verhaal (tegen een andere bewering of het dossier)
+- [x] Inventaris: cassettes, Minox, afluistersets via Requisitie (kost gunst); omkopen met Westgeld
+- [x] Reputatie (MfS, buurt, kerk, gezin) en bijmissies (gunsten) per bewoner
 
 **Publicatie**
 - [x] Vercel-project `akte-ostberlin`, gekoppeld aan GitHub: elke push naar `main` gaat live op de hoofdlink (geen previews)
@@ -153,7 +155,7 @@ De belangrijkste blokjes zijn vervangen door echte low-poly modellen. Lukt het l
 
 ## Fase 6: Nieuwe spelonderdelen
 
-- [ ] **Verhoor**: een gesprek in de verhoorkamer met keuzes. Zoek de tegenstrijdigheid in iemands verhaal.
+- [x] **Verhoor**: zoek de tegenstrijdigheid in iemands verhaal (fase 3E, als Befragung)
 - [ ] **Bandrecorder**: luister afgeluisterde gesprekken terug op een spoelenrecorder, spoel heen en weer en markeer verdachte zinnen
 - [ ] **Brieven openstomen** (Abteilung M): stoom een envelop open, lees hem, plak hem terug zonder sporen. Te lang = de ontvanger merkt het.
 - [ ] **Schaduwen**: volg iemand door de wijk zonder gezien te worden

@@ -141,10 +141,12 @@ export const NEEDS = {
 };
 
 export const RANKS = [
-  { id: "Leutnant", mk: 3, ims: 3, bugs: 1 },
-  { id: "Oberleutnant", mk: 4, ims: 4, bugs: 2 },
-  { id: "Hauptmann", mk: 5, ims: 6, bugs: 3 },
-  { id: "Major", mk: 6, ims: 8, bugs: 4 },
+  // xp = ervaringspunten nodig voor deze rang (fase 3E: bevordering via ervaring, niet meer via de jaarbeoordeling)
+  { id: "Leutnant", mk: 3, ims: 3, bugs: 1, xp: 0 },
+  { id: "Oberleutnant", mk: 4, ims: 4, bugs: 2, xp: 80 },
+  { id: "Hauptmann", mk: 5, ims: 6, bugs: 3, xp: 220 },
+  { id: "Major", mk: 6, ims: 8, bugs: 4, xp: 420 },
+  { id: "Oberstleutnant", mk: 7, ims: 10, bugs: 5, xp: 650 },
 ];
 
 // Gebouwen in de wijk (grid x,z), type bepaalt 3D-model

@@ -374,3 +374,24 @@ body.sheet-open #leave{display:none}
 .strip .words span.got{color:var(--lcd);text-decoration:underline}
 .strip .words span.miss{color:#777}
 .dark canvas{display:block;width:100%;max-width:300px;margin:6px auto;image-rendering:pixelated;border:6px solid #1a1a18;box-shadow:2px 2px 0 rgba(0,0,0,.4)}
+/* ===== fase 3E: RPG ===== */
+.hrow button.rk{all:unset;cursor:pointer;font:400 13px var(--head);letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-left:auto;padding:3px 6px;border:1px solid rgba(216,178,62,.35)}
+.hrow button.rk b{font:400 15px/1 var(--mono);background:var(--red);color:#fff;padding:1px 4px;margin-left:6px;letter-spacing:0;animation:blinkRk 1.2s steps(2) infinite}
+@keyframes blinkRk{50%{opacity:.45}}
+button.ch b em.pct{font:400 16px/1 var(--mono);font-style:normal;background:var(--ink);color:var(--gold);padding:1px 5px;float:right;margin-left:8px}
+button.act.sk b em{letter-spacing:2px;color:var(--gold)}
+.reps{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin:8px 0}
+.rep small{display:block;font:500 10px var(--head);letter-spacing:1.5px;text-transform:uppercase;color:var(--ink2)}
+.rep span{display:block;font:400 15px var(--mono);color:var(--ink2);margin-top:2px}
+.rep .sus3 i.on{background:#2f5a22}
+.mg.verh .vfile{background:#e9dfc2;border:1px solid var(--paper3);border-left:5px solid var(--red-d);padding:7px 10px;font-size:13px;margin-bottom:8px}
+.mg.verh .vfile b{display:block;font:500 11px var(--head);letter-spacing:1.5px;text-transform:uppercase;color:var(--red-d)}
+.mg.verh .vfile small{display:block;font:500 10px var(--head);letter-spacing:1.5px;text-transform:uppercase;color:var(--ink2);margin-top:4px}
+.mg.verh .vfile span{display:block;font:400 15px var(--mono)}
+.mg.verh .vtime{height:6px;background:#bfb595;margin:4px 0}
+.mg.verh .vtime i{display:block;height:100%;width:100%;background:var(--red);transition:width .2s linear}
+.mg.verh .vlines{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.mg.verh .vl{all:unset;cursor:pointer;background:#f3eedd;border:1px solid var(--paper3);border-left:4px solid var(--ink);padding:8px 10px;font-size:14.5px;line-height:1.3;box-shadow:2px 2px 0 rgba(0,0,0,.15)}
+.mg.verh .vl:active{transform:translate(1px,1px)}
+.mg.verh .vl.miss{opacity:.45;border-left-color:#6b6b6b;text-decoration:line-through}
+.mg.verh .vl.got{border-left-color:var(--red);background:#ffe2dc}

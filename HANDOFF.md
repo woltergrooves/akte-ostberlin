@@ -37,26 +37,25 @@ Lees dit bestand eerst. Het wordt na elke fase bijgewerkt.
 6. Antwoord kort en in het Nederlands. Eindig met de korte prompt voor de volgende chat.
 
 ## Status
-- Klaar: fase 1, 1b, 2, **3 A+B** en **3 C+D plus alle ideeën** (17 nov). Speelbaar op https://akte-ostberlin.vercel.app (alleen deze link).
-- Save-key nu `akte-save-v5` (nieuwe velden: `links`, `inv`, `warned`, `ownLog`, `homeBugs`, `talked`, `used`, `shredded`, `mods`). Oude saves worden genegeerd.
-- Nieuwe modules: `js/audio.js` (WebAudio-effecten), `js/interiors.js` (binnenruimtes, `buildInterior`), `js/minigames.js` (letter/tape/darkroom), `js/daily.js` (Daily Akte), `js/meta.js` (onderscheidingen, archief, startvoorwaarden; over runs heen in localStorage), `js/lexicon.js` (Handboek: `RULES` wel/niet toegestaan + `CHRONICLE` per beurt).
-- `data.js`: `NEWS` (per beurtsleutel, `[bron, tekst]`, ook als `T.news`), `HOLIDAYS` per maand, `SLOGANS` per jaar, `LINKS` + `makeLinks()` (verbanden per seed), `NEEDS` (wat IM's willen). Bewoners hebben nu 2–3 kenmerken.
-- `world.js`: modus `interior` (`enterInterior(kind, data)`, labels `i:key` → `H.onInterior`), tikbare lopers (`setWalkers`, `selectWalker`, `H.onWalker`), speciale tikplekken `booth` en `litfass` (via `onBuilding`), kantoorobjecten `radio`, `krant`, `kassette`, `prikbord`, `boek`; `setNews`, `setPinboard`, `setRadio`, `setKassette`; `setDistrict` kent nu `year, festive, subbotnik, fdj, pioneers, queue, intershop`. Labels in kantoor en binnenruimtes ontwarren zichzelf (`declutter`).
-- `game.js`: `enterInterior`/`onInterior`/`leaveInterior` (knop `#leave`), `walkerCard`, `gossip` (kenmerk met bron `talk` = roddel, onbevestigd), `treffView`/`kwList`, `boothCall`, `flatSearch`, `pinboardView`, `strongboxView`, `handbook(tab, terug)`, `teaser()` (cliffhanger), `overtime()` (minigame +1 MP), `shredPicker()` (9 nov), `archiveView()`, `discoverLinks()`/`completion()`.
-- Uitgestelde gevolgen werken met vlaggen op keuzes (`brandtSpared`, `annaIM`, `lenaLet`, `kuehnZers`, `michaFree`, `sorted` …) en scènes in `CONDITIONAL` (events.js). Teasers: veld `tease` op een scène.
-- Test 17 nov: drie volledige rondes 1983 → epiloog (met shredderkeuze) zonder consolefouten; alle binnenruimtes en tikplekken los getest; mobiel 390×844 en desktop 1280×800. Testscript lag in `/tmp`.
+- Klaar: fase 1, 1b, 2, 3 A+B, 3 C+D plus alle ideeën (17 nov) en **3E RPG** (18 nov). Speelbaar op https://akte-ostberlin.vercel.app (alleen deze link).
+- Save-key nu `akte-save-v6` (nieuwe velden: `xp`, `spent`, `sk`, `rep {buurt, kerk}`, `errands`, `promo`; per persoon `owes`, `held`). Oude saves worden genegeerd.
+- Modules: `js/audio.js`, `js/interiors.js`, `js/minigames.js` (letter/tape/darkroom/**verhoor**), `js/daily.js`, `js/meta.js` (nu ook medaille `helfer`), `js/lexicon.js`, **`js/rpg.js`** (SKILLS, XP-tabel, REP, ERRANDS, `buildStory` voor het verhoor).
+- Fase 3E in `game.js`:
+  - XP via `gainXP(n)` of `e.xp` in `applyE` (chip "XP +n"). Rang hangt af van `RANKS[i].xp` (0/80/220/420/650; vijfde rang Oberstleutnant). Bevordering zet `S.promo`; `showPromo()` verschijnt na `after()`, na een gebeurtenis, na de jaarbeoordeling of bij de briefing. Jaarbeoordeling geeft nu +25 XP en geen automatische bevordering meer.
+  - Vaardigheden `S.sk` (obs, verh, ueb, tech, geh; max 5), één punt per 40 XP (`points()`). Effecten: observeren, roddel, waarschuwen, werfkans, ontdekkingskans microfoons, postcontrole, verdenking (`applyE` schaalt `d`), telefooncel, Fuchs. Tech 3 = +1 afluisterset (`bugCap()`).
+  - Kaderakte: `kaderView` (tik op de rang in de HUD; rode +N bij punten). Ook via Jaardoelen.
+  - Straat: `walkerCard` → `talkMenu` met keuzes en kansen (`talkChance`): small talk, vragen naar buren (Overtuigen), papieren vragen (Verhoor), koffie, omkopen met DM. Soms vraagt iemand een gunst.
+  - Gunsten: `S.errands` (max 3, 3 beurten), uitvoeren in het dossier (`doErrand`): persoon `owes` (+15% werven), buurt +5. Verlopen: buurt −4.
+  - Verhoor: knop "Interrogate" (2 MP, dossier ≥ 10 p.) → `interrogate(p)` → minigame `verhoor`. Cassette = extra leven (wordt verbruikt als je hem nodig had). Bekentenis van de dader markeert de zaak.
+  - Treff: extra keuzes Probe (Verhoor), Win over (Overtuigen), Record (cassette → `im.held`: trager loyaliteitsverlies, nooit dubbelagent).
+  - Geldkistje: Requisitie bij Abteilung 26 (1× per beurt, kost gunst): cassette, afluisterset (Techniek ≥ 1, max 3), Minox (vanaf Oberleutnant; observeren geeft minstens 2 dingen).
+  - Reputatie: MfS = Favour, gezin = Family, nieuw `S.rep.buurt` en `S.rep.kerk` (zakken bij arrestaties, Zersetzung, waarschuwingen; stijgen met gunsten; trekken elke beurt 1 punt terug naar 45/40). Effect op gesprekskansen, roddel, werven van kerkmensen, epiloog.
+- Test 18 nov: drie volledige rondes 1983 → einde (mobiel 390×844 en desktop) met alle nieuwe schermen, geen consolefouten (alleen de geblokkeerde Google-fonts in de testomgeving). Testscript lag in `/tmp/akt`.
 
-## Volgende fase: FASE 3E (RPG-elementen)
-Houd elk scherm kort: één duidelijke keuze tegelijk (iPhone).
-- Ervaringspunten uit zaken, rapporten en complete dossiers; rang hangt daarvan af (nu: jaarbeoordeling). Overweeg een vijfde rang of bevordering via XP, want met 6 beoordelingen word je snel Major.
-- Vaardigheden: Observatie, Verhoor, Overtuigen, Techniek (microfoons), Geheimhouding. Ze beïnvloeden de kansen die het spel al toont (werven, observeren, roddel, postcontrole, microfoon ontdekt).
-- Gesprekskeuzes met vaardigheidscheck (kans in procenten, in de huidige stijl), bijv. in `walkerCard` en `treffView`.
-- Verhoor-minigame: tegenstrijdigheid zoeken in iemands verhaal (past naast `js/minigames.js`).
-- Inventaris uitbreiden: er is al `S.inv` met `dm`, `kaffee`, `buck` (geldkistje). Toevoegen: cassettes, Minox-camera, afluistersets; omkopen.
-- Reputatie bij Kessler/MfS, de buurt, de kerk en het gezin; bijmissies per bewoner.
-- Kleine wensen: lopers in de wijk tonen hun naam alleen na tikken; misschien bewoners in binnenruimtes koppelen aan echte personen.
+## Volgende fase: FASE 4 (animaties)
+Zie hieronder. Kleine RPG-wensen voor later: balans van XP (een speler haalt ±500–800 XP), meer soorten gunsten, gesprekskeuzes ook in de Kneipe en de Kaufhalle.
 
-## Fase 4: animaties (was fase 3)
+## Fase 4: animaties
 - Eerste-persoonshanden in het kantoor: hoorn oppakken als de telefoon gaat (node `Handset`), dossier pakken en openslaan, stempelen bij een beslissing ("GENEHMIGT"/"ABGELEHNT", node `Stamp`), typen bij Afsluiten met papier dat eruit wordt getrokken (`Carriage`, `Paper`). Handen eventueel zelf bouwen als low-poly rigid parts.
 - Camera: rondkijken in het kantoor, vlucht door het raam naar de wijk, inzoomen op een getikt gebouw.
 - Wijk: echte loop-, sta- en praatanimaties voor de figuren. Probeer eerst de Quaternius *Universal Animation Library* (CC0) via GitHub-mirrors. Lukt dat niet, maak dan clips met keyframes op de botten (`AnimationClip` met `QuaternionKeyframeTrack`) en vervang daarmee `posePerson()`.

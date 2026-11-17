@@ -11,12 +11,13 @@ export const MINI = {
   letter: { t: "Abteilung M: steam open a letter", d: "Hold the kettle under the flap. Let go when the needle is in the green. Too long and the paper wrinkles: the recipient will notice." },
   tape: { t: "The tape recorder", d: "Tap MARK when a red word passes the line. Three suspicious words are hidden in the conversation." },
   darkroom: { t: "The darkroom", d: "Hold to develop the photo. Let go when the face is sharp. Too long and it goes black." },
+  verhoor: { t: "Interrogation", d: "One statement is a lie: it clashes with another statement or with the file. Tap it before the time runs out." },
 };
 
 export function playMinigame(kind, ui, opts = {}, done) {
   const M = MINI[kind]; let over = false, raf = 0, timer = 0;
   const finish = res => { if (over) return; over = true; cancelAnimationFrame(raf); clearInterval(timer); setTimeout(() => done(res), 900); };
-  const head = `<div class="kicker">Überstunden · ${opts.reward ? esc(opts.reward) : "about 30 seconds"}</div><h1>${M.t}</h1><p class="who">${M.d}</p>`;
+  const head = `<div class="kicker">${opts.kicker ? esc(opts.kicker) : `Überstunden · ${opts.reward ? esc(opts.reward) : "about 30 seconds"}`}</div><h1>${M.t}</h1><p class="who">${M.d}</p>`;
   if (kind === "letter") {
     ui.modal(`${head}<div class="mg letter"><div class="env"><div class="flap" id="flap"></div><div class="addr">${esc(opts.to || "Familie Müller")}<br>${esc(opts.addr || "Berlin 1055")}</div><div class="stampW"></div></div>
       <div class="gauge"><i class="zone"></i><b id="nd"></b></div><div class="mgmsg" id="mm">Hold the button.</div>
@@ -74,6 +75,24 @@ export function playMinigame(kind, ui, opts = {}, done) {
         if (e < 0.6) { mm.textContent = tries < 4 ? "Still too pale. Again." : "The developer is exhausted."; if (tries >= 4) finish({ ok: false, score: 0.3 }); return; }
         if (e <= 0.86) { mm.textContent = "Sharp. You recognise the face."; ui.sfx.shutter(); finish({ ok: true, score: 1 }); }
         else { mm.textContent = "Too dark to be sure."; finish({ ok: false, score: 0.4 }); }
+      });
+      m.querySelector("#skip").onclick = () => finish({ ok: false, score: 0, skipped: true });
+    }, { lock: true });
+  }
+  else if (kind === "verhoor") {
+    const st = opts.story, T = opts.time || 30, L0 = opts.lives || 1; let lives = L0, left = T;
+    const good = i => i === st.lie || (st.why !== "file" && i === st.why);
+    ui.modal(`${head}<div class="mg verh"><div class="vfile"><b>Kreisdienststelle · Room 4 · ${esc(opts.name || "")}</b>${(opts.file || []).length ? `<small>From the file:</small>${opts.file.map(f => `<span>${esc(f)}</span>`).join("")}` : "<small>The file is thin. Listen carefully.</small>"}</div>
+      <div class="vtime"><i id="vt"></i></div><div class="mgmsg" id="mm">${"▮".repeat(lives)} · ${T} s</div>
+      <div class="vlines">${st.lines.map((l, i) => `<button class="vl" data-i="${i}">‘${esc(l)}’</button>`).join("")}</div>
+      <button class="next ghost" id="skip">Let them go</button></div>`, m => {
+      const vt = m.querySelector("#vt"), mm = m.querySelector("#mm"); const t0 = performance.now();
+      const upd = () => { mm.textContent = `${"▮".repeat(Math.max(0, lives))} · ${Math.ceil(left)} s`; };
+      timer = setInterval(() => { left = T - (performance.now() - t0) / 1000; vt.style.width = Math.max(0, left / T * 100) + "%"; upd(); if (left <= 0) { mm.textContent = "Time is up. They have stopped talking."; ui.sfx.bad(); finish({ ok: false, score: 0, msg: "time", used: L0 - lives }); } }, 200);
+      m.querySelectorAll(".vl").forEach(b => b.onclick = () => {
+        if (over || b.disabled) return; const i = +b.dataset.i;
+        if (good(i)) { b.classList.add("got"); if (st.why !== "file") m.querySelector(`.vl[data-i="${st.lie === i ? st.why : st.lie}"]`).classList.add("got"); mm.textContent = "‘…All right. All right.’ The story collapses."; ui.sfx.stamp(); finish({ ok: true, score: Math.max(0.3, left / T), used: L0 - lives }); }
+        else { b.disabled = true; b.classList.add("miss"); lives--; ui.sfx.bad(); upd(); if (lives <= 0) { mm.textContent = "That checks out. They see you guessing, and they relax."; finish({ ok: false, score: 0, msg: "wrong", used: L0 - lives }); } }
       });
       m.querySelector("#skip").onclick = () => finish({ ok: false, score: 0, skipped: true });
     }, { lock: true });
