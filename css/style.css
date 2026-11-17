@@ -179,6 +179,25 @@ label.sel select{margin-top:4px}
 .msg .mt{font:400 18px/1.15 var(--mono);white-space:pre-line;margin-top:4px;color:#2c281f}
 .msg.unread .mh b:before{content:"■ ";color:var(--red)}
 .msg.k-warn .mh b,.msg.k-case .mh b{color:var(--red)}
+/* postvak: soort als Dymo-tape, eerste regel, uitklappen */
+.msg .mh{align-items:center;justify-content:flex-start}
+.msg .mh b{flex:1;min-width:0}
+.mlab{flex:none;background:var(--tape);color:#eee;font:500 10px var(--head);letter-spacing:1.6px;text-transform:uppercase;padding:2px 6px 1px;border-radius:2px;text-shadow:0 1px 0 #000,0 -1px 0 rgba(255,255,255,.3);box-shadow:inset 0 -2px 0 rgba(0,0,0,.55)}
+.msg.k-bug .mlab{background:#1f4a2b}.msg.k-warn .mlab{background:var(--red-d)}.msg.k-info .mlab{background:#1f3a63}.msg.k-case .mlab{background:var(--red)}
+.msg .mx{flex:none;font:400 20px/1 var(--mono);color:var(--ink2);width:16px;text-align:center}
+.msg.fold{cursor:pointer}
+.msg .mt.full{display:none}
+.msg.open .mt.short{display:none}.msg.open .mt.full{display:block}.msg.open .mx{transform:rotate(45deg)}
+.ibh{font:500 11px var(--head);letter-spacing:2px;text-transform:uppercase;color:var(--ink2);border-bottom:2px solid var(--ink);padding:12px 0 3px;margin-bottom:2px}
+.ibh.red{color:var(--red-d);border-color:var(--red-d)}
+details.ibt{border-bottom:1px solid rgba(0,0,0,.18)}
+details.ibt>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;padding:10px 2px 7px;font:500 13px var(--head);letter-spacing:1.6px;text-transform:uppercase;color:var(--ink)}
+details.ibt>summary::-webkit-details-marker{display:none}
+details.ibt>summary:before{content:"▸";margin-right:7px;color:var(--ink2)}
+details.ibt[open]>summary:before{content:"▾"}
+details.ibt>summary span{flex:1}
+details.ibt>summary small{font:400 15px var(--mono);color:var(--ink2);letter-spacing:0;text-transform:none}
+details.ibt .msg:last-child{border-bottom:0}
 .statline{margin:8px 0}
 .statline .stat .sl{color:var(--ink2)} .statline .bar{background:#bfb595}
 .advice{border:2px solid var(--ink);background:#fff6d6;padding:8px 11px;font-size:14px;line-height:1.45;margin:10px 0;position:relative}

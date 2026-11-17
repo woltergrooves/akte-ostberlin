@@ -1,4 +1,4 @@
-# AKTE. Ost-Berlin 1985–1989
+# AKTE. Ost-Berlin 1983–1989
 
 Een Stasi-simulator in de browser. Je bent Leutnant bij de geheime dienst van de DDR en houdt één wijk in Prenzlauer Berg in de gaten. Je werft informanten, lost onderzoeken op en beslist over levens, tot de Muur valt. Daarna lees je in 1992 wat er van iedereen geworden is.
 
@@ -19,7 +19,7 @@ De 3D-graphics laden [three.js](https://threejs.org) (r160) via jsDelivr, dus de
 
 ## Hoe het werkt
 
-- **15 beurten**: drie per jaar (voorjaar, zomer, herfst), en in 1989 drie beurten tot 9 november.
+- **32 beurten** (1983–1989): vier per jaar, extra beurten in 1987 en in de herfst van 1989. Elke beurt hoort bij een echte gebeurtenis met een gecontroleerde datum.
 - **Kantoor** (3D): telefoon = opdrachten, map = rapporten, rode map = onderzoek, kast = alle personen, foto = gezin, kaart = wijk.
 - **Wijk** (3D): elf gebouwen, ongeveer dertig bewoners. Tik op een gebouw.
 - **Acties** (mankracht): observeren, werven als informant (IM), waarschuwen, arresteren en microfoons plaatsen.

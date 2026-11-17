@@ -1,15 +1,44 @@
-// ===================== DATA: Akte — Ost-Berlin 1985–1989 =====================
+// ===================== DATA: Akte — Ost-Berlin 1983–1989 =====================
 
-// Beurten: drie per jaar (voorjaar, zomer, herfst), 1989 versnelt naar de val van de Muur
-export const TURNS = (() => {
-  const seasons = ["Voorjaar", "Zomer", "Herfst"];
-  const out = [];
-  for (let y = 1985; y <= 1988; y++) seasons.forEach((n, s) => out.push({ y, s, label: `${n} ${y}`, key: `${y}-${s}`, first: s === 0, review: s === 2, winter: s !== 1 }));
-  out.push({ y: 1989, s: 1, label: "Zomer 1989", key: "1989-zomer", first: true, flight: true });
-  out.push({ y: 1989, s: 2, label: "7 oktober 1989", key: "1989-okt", late: true, winter: false });
-  out.push({ y: 1989, s: 2, label: "9 november 1989", key: "1989-nov", late: true, winter: true });
-  return out;
-})();
+// Beurten: vier per jaar, extra beurten in 1987 en in de herfst van 1989 (32 in totaal).
+// Elke beurt hoort bij een echte gebeurtenis; datums gecontroleerd met webbronnen (zie ROADMAP.md, fase 3).
+// first = begin jaardoel, review = jaarbeoordeling, winter = sneeuw/kachelrook, flight = vluchtgolf, late = geen losse gebeurtenissen
+const tu = (y, m, key, o = {}) => ({ y, label: `${m} ${y}`, key, ...o });
+export const TURNS = [
+  tu(1983, "Maart", "1983-mrt", { first: true, winter: true }),
+  tu(1983, "Juni", "1983-jun"),
+  tu(1983, "September", "1983-sep"),              // 24 sept.: Schwerter zu Pflugscharen in Wittenberg
+  tu(1983, "December", "1983-dec", { review: true, winter: true }), // 12 dec.: arrestatie Bohley en Poppe
+  tu(1984, "Maart", "1984-mrt", { first: true, winter: true }),     // uitreisgolf, ±40.000 in 1984
+  tu(1984, "Juni", "1984-jun"),                    // 27 juni: Ständige Vertretung gesloten
+  tu(1984, "September", "1984-sep"),
+  tu(1984, "December", "1984-dec", { review: true, winter: true }),
+  tu(1985, "Maart", "1985-mrt", { first: true, winter: true }),     // 11 maart: Gorbatsjov
+  tu(1985, "Juni", "1985-jun"),
+  tu(1985, "September", "1985-sep"),
+  tu(1985, "December", "1985-dec", { review: true, winter: true }),
+  tu(1986, "Maart", "1986-mrt", { first: true, winter: true }),
+  tu(1986, "Mei", "1986-mei"),                     // 26 april: Tsjernobyl
+  tu(1986, "September", "1986-sep"),               // 2 sept.: Umwelt-Bibliothek in de Zionskirche
+  tu(1986, "December", "1986-dec", { review: true, winter: true }),
+  tu(1987, "Maart", "1987-mrt", { first: true, winter: true }),
+  tu(1987, "Juni", "1987-jun"),                    // 6–8 juni: Concert for Berlin bij de Rijksdag
+  tu(1987, "September", "1987-sep"),               // 7–11 sept.: Honecker in de Bondsrepubliek
+  tu(1987, "Oktober", "1987-okt"),                 // 17 okt.: skinheads in de Zionskirche
+  tu(1987, "November", "1987-nov", { review: true, winter: true }), // 24/25 nov.: inval Umwelt-Bibliothek
+  tu(1988, "Januari", "1988-jan", { first: true, winter: true }),   // 17 jan.: Liebknecht-Luxemburg
+  tu(1988, "April", "1988-apr"),
+  tu(1988, "Juli", "1988-jul"),                    // 19 juli: Springsteen in Weißensee
+  tu(1988, "November", "1988-nov", { review: true, winter: true }), // 19 nov.: Sputnik geschrapt
+  tu(1989, "Februari", "1989-feb", { first: true, winter: true }),  // 5 feb.: Chris Gueffroy
+  tu(1989, "Mei", "1989-mei"),                     // 7 mei: gemeenteraadsverkiezingen
+  tu(1989, "Augustus", "1989-aug", { flight: true }),  // 19 aug.: Paneuropees picknick
+  tu(1989, "September", "1989-sep", { flight: true }), // 9/10 sept.: Neues Forum, 11 sept.: Hongarije open
+  { y: 1989, label: "7 oktober 1989", key: "1989-okt", late: true },
+  { y: 1989, label: "4 november 1989", key: "1989-nov4", late: true, winter: true },
+  { y: 1989, label: "9 november 1989", key: "1989-nov", late: true, winter: true },
+];
+export const turnIndex = key => TURNS.findIndex(t => t.key === key);
 
 export const RANKS = [
   { id: "Leutnant", mk: 3, ims: 3, bugs: 1 },
@@ -143,13 +172,14 @@ export function generatePeople(seed) {
 }
 
 // Pamfletten / anonieme acties — sjablonen
-export const INCIDENTS = [
-  { t: "Een anoniem pamflet", d: "‘Wij willen geen land waar je je eigen buren moet vrezen.’ Gevonden in brievenbussen." },
-  { t: "Leuzen op een muur", d: "Op een gevel staat in witte verf: ‘GORBI GORBI’. Erbij een getypt briefje met de tekst van artikel 27 van de grondwet: vrijheid van meningsuiting." },
-  { t: "Een getypte oproep", d: "Een oproep om op de 7e van de maand met een kaars naar de Alexanderplatz te komen." },
-  { t: "Een samizdat-blad", d: "Zes getypte pagina's, ‘Umweltblätter’, over de luchtvervuiling in Bitterfeld." },
-  { t: "Een open brief", d: "Een brief aan de Volkskammer over reisvrijheid, met de oproep hem over te typen en door te geven." },
-  { t: "Een spotgedicht", d: "Een getypt gedicht over een ‘oude man met een hoed die de toekomst niet ziet’." },
+export const INCIDENTS = [   // from = vroegste jaar waarin het past
+  { t: "Een anoniem pamflet", d: "‘Wij willen geen land waar je je eigen buren moet vrezen.’ Gevonden in brievenbussen.", from: 1983 },
+  { t: "Leuzen op een muur", d: "Op een gevel staat in witte verf: ‘GORBI GORBI’. Erbij een getypt briefje met de tekst van artikel 27 van de grondwet: vrijheid van meningsuiting.", from: 1987 },
+  { t: "Een getypte oproep", d: "Een oproep om op de 7e van de maand naar de Alexanderplatz te komen, tegen de vervalste verkiezingsuitslag.", from: 1989 },
+  { t: "Een samizdat-blad", d: "Zes getypte pagina's, ‘Umweltblätter’, over de luchtvervuiling in Bitterfeld.", from: 1987 },
+  { t: "Een open brief", d: "Een brief aan de Volkskammer over reisvrijheid, met de oproep hem over te typen en door te geven.", from: 1983 },
+  { t: "Een spotgedicht", d: "Een getypt gedicht over een ‘oude man met een hoed die de toekomst niet ziet’.", from: 1983 },
+  { t: "Een stencil over vrede", d: "Een gestencild blad met een tekening van een smid die een zwaard omsmeedt, en de tekst: ‘Schwerter zu Pflugscharen’.", from: 1983 },
 ];
 
 // Afgeluisterde fragmenten per trait (Wanze / telefoontap)

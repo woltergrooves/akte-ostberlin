@@ -73,12 +73,14 @@ De belangrijkste blokjes zijn vervangen door echte low-poly modellen. Lukt het l
 ## Fase 3: Tempo, geschiedenis, sfeer en RPG
 
 **Fixes**
-- [ ] Opdrachten verdwijnen na één beslissing (nu kun je ze opnieuw openen en kiezen)
-- [ ] Postvak in overzichtelijker: opdrachten bovenaan, berichten per beurt, soort als label, oudere beurten ingeklapt
+- [x] Opdrachten verdwijnen na één beslissing (getest: tweede poging doet niets)
+- [x] Postvak in overzichtelijker: opdrachten bovenaan, nieuw apart, soort als Dymo-label, eerste regel met uitklappen, oudere beurten ingeklapt
 
 **Tempo en geschiedenis**
-- [ ] Langzamer: begin in 1983, ±30 beurten in plaats van 15
-- [ ] Echte gebeurtenissen met gecontroleerde datums (vredesbeweging, Umweltbibliothek, Bowie-concert 1987, Sputnik-verbod, verkiezingsfraude 1989, 7 oktober, 4 en 9 november)
+- [x] Langzamer: begin in maart 1983, 32 beurten (vier per jaar, vijf in 1987, zeven in 1989); nieuwe jaardoelen; save-key `akte-save-v4`
+- [x] Echte gebeurtenissen met gecontroleerde datums, 9 nieuwe verhaalscènes; losse pamfletten pas vanaf het jaar waarin ze passen
+
+  Gecontroleerd (17 nov 2026): Schwerter zu Pflugscharen in Wittenberg, 24-9-1983 (evangelisch.de) · arrestatie Bohley en Poppe, 12-12-1983, zes weken vast (jugendopposition.de, dissidenten.eu) · uitreisgolf 1984, ±40.000 (germanhistorydocs.org) · Ständige Vertretung gesloten 27-6 t/m 31-7-1984 (bpb.de) · Gorbatsjov gekozen 11-3-1985 (bpb.de) · Tsjernobyl 26-4-1986, ND drukt TASS-melding (bpb.de, freitag.de) · Umwelt-Bibliothek geopend 2-9-1986 (germanhistorydocs.org) · Concert for Berlin 6–8-6-1987 (museum-digital.de) · Honecker in de BRD 7–11-9-1987, Olof-Palme-mars 1–18-9 (bundesarchiv.de) · skinheads in de Zionskirche 17-10-1987, ±30 man (stasi-mediathek.de) · Aktion „Falle“ 24/25-11-1987 (stasi-mediathek.de) · Liebknecht-Luxemburg-demo 17-1-1988 (bundesarchiv.de) · Springsteen Weißensee 19-7-1988, 160.000 kaarten (l-iz.de) · Sputnik geschrapt 18/19-11-1988 (stasi-mediathek.de) · Chris Gueffroy 5-2-1989, rouwadvertentie 21-2 (chronik-der-mauer.de) · verkiezingen 7-5-1989, 98,85% (bundestag.de) · Hongaarse grens: afbraak vanaf 2-5, picknick 19-8, open 11-9-1989 · Neues Forum 9/10-9-1989 (bpb.de) · Alexanderplatz 4-11-1989, ADN-gebouw, live op tv (dhm.de, germanhistorydocs.org) · Bornholmer Straße open ±23.30 uur, 9-11-1989
 
 **DDR-sfeer**
 - [ ] Radio, *Aktuelle Kamera*, krantenkoppen van *Neues Deutschland*, feestdagen op de kalender
