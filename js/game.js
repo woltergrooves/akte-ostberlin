@@ -81,16 +81,16 @@ function briefing(before) {
   const T = turn(); const items = S.inbox.filter(i => i.t === S.t);
   const cnt = k => items.filter(i => i.k === k).length;
   const li = [];
-  if (S.tut === 99 && S.flags._tutJustDone) { delete S.flags._tutJustDone; li.push("✅ <b>De uitleg is klaar.</b> Vanaf nu staat onderaan steeds wat je het beste kunt doen."); }
-  if (cnt("im")) li.push(`👤 <b>${cnt("im")} rapport${cnt("im") > 1 ? "en" : ""}</b> van je informanten liggen in <b>Dossiers</b>.`);
-  if (cnt("bug")) li.push(`🎙 <b>${cnt("bug")} afgeluisterd${cnt("bug") > 1 ? "e gesprekken" : " gesprek"}</b> liggen in <b>Dossiers</b>.`);
-  items.filter(i => i.k === "case").forEach(i => li.push(`🔴 <b>Nieuw onderzoek:</b> ${esc(i.title.replace("Onderzoek: ", ""))}. Vind de dader binnen 2 beurten.`));
-  items.filter(i => i.k === "warn" || i.k === "info").forEach(i => li.push(`⚠️ <b>${esc(i.title)}</b>`));
+  if (S.tut === 99 && S.flags._tutJustDone) { delete S.flags._tutJustDone; li.push("<b>De uitleg is klaar.</b> Vanaf nu staat onderaan steeds wat je het beste kunt doen."); }
+  if (cnt("im")) li.push(`<b>${cnt("im")} rapport${cnt("im") > 1 ? "en" : ""}</b> van je informanten liggen in <b>Dossiers</b>.`);
+  if (cnt("bug")) li.push(`<b>${cnt("bug")} afgeluisterd${cnt("bug") > 1 ? "e gesprekken" : " gesprek"}</b> liggen in <b>Dossiers</b>.`);
+  items.filter(i => i.k === "case").forEach(i => li.push(`<b>Nieuw onderzoek:</b> ${esc(i.title.replace("Onderzoek: ", ""))}. Vind de dader binnen 2 beurten.`));
+  items.filter(i => i.k === "warn" || i.k === "info").forEach(i => li.push(`<b>${esc(i.title)}</b>`));
   if (!cnt("im") && !cnt("bug")) li.push(`<span class="muted">Geen nieuwe informatie. Werf informanten of plaats microfoons.</span>`);
   
   const mr = monthsToReview(); const q = S.quota;
   modal(`<div class="kicker">Nieuwe beurt</div><h1>${esc(T.label)}</h1>
-   <ul class="brief">${li.slice(0, 4).map(x => `<li>${x}</li>`).join("")}${mr ? `<li>🎯 Jaardoel (over ${mr} beurt${mr > 1 ? "en" : ""}): <b>${S.res}/${q.res}</b> resultaten · <b>${imCount()}/${q.ims}</b> informanten</li>` : ""}<li>🟨 <b>${S.mk} mankracht</b> deze beurt</li></ul>
+   <ul class="brief">${li.slice(0, 4).map(x => `<li>${x}</li>`).join("")}${mr ? `<li>Jaardoel (over ${mr} beurt${mr > 1 ? "en" : ""}): <b>${S.res}/${q.res}</b> resultaten · <b>${imCount()}/${q.ims}</b> informanten</li>` : ""}<li><b>${S.mk} mankracht</b> deze beurt</li></ul>
    <button class="next" id="nx">Aan de slag</button>`, m => m.querySelector("#nx").onclick = () => { closeModal(); setMode("office"); }, { lock: true });
 }
 
@@ -279,9 +279,9 @@ const ACT = {
     p.twChecked = true;
     hidden.forEach(t => { if (R() < (TRAITS[t].tw ? 1 : 0.55)) { lines.push("✓ " + trLabel(t)); p.known[t] = { s: "zeker" }; got++; } });
     if (!got && hidden.length) { const t = rand(hidden); p.known[t] = { s: "zeker" }; lines.push("✓ " + trLabel(t)); }
-    if (p.status === "im" && p.doubleAgent && !p.known.dubbel && R() < 0.5) { p.known.dubbel = { s: "zeker" }; lines.push("⚠ " + trLabel("dubbel")); }
+    if (p.status === "im" && p.doubleAgent && !p.known.dubbel && R() < 0.5) { p.known.dubbel = { s: "zeker" }; lines.push("" + trLabel("dubbel")); }
     if (!lines.length) lines.push("Niets nieuws. Een saai leven, of een voorzichtig leven.");
-    after(`<h1>Observatie: ${esc(p.name)}</h1><div class="result">${lines.map(esc).join("\n")}</div><div class="advice">💡 ${personAdvice(p)}</div>`);
+    after(`<h1>Observatie: ${esc(p.name)}</h1><div class="result">${lines.map(esc).join("\n")}</div><div class="advice">${personAdvice(p)}</div>`);
   },
   post(p) {
     if (!spend(1)) return; p.pages += 4; addLog(p, "Postcontrole");
@@ -443,13 +443,13 @@ function finish(cause) {
 }
 
 // ===================== UI =====================
-function bar(lbl, v, col, inv) { return `<div class="stat"><div class="sl"><span>${lbl}</span><span>${v}</span></div><div class="bar"><i style="width:${v}%;background:${col}"></i></div></div>`; }
+function bar(lbl, v, cls) { const seg = Math.round(v / 10); return `<div class="stat ${cls || ""}"><div class="sl"><span>${lbl}</span><b>${String(v).padStart(3, "0")}</b></div><div class="bar">${Array.from({ length: 10 }, (_, i) => `<i class="${i < seg ? "on" : ""}"></i>`).join("")}</div></div>`; }
 function refresh() {
   if (!S) return;
   const T = turn();
-  $("#hud").innerHTML = `<div class="hrow"><span class="date">${esc(T.label)}</span><span class="rk">${esc(rank().id)} · IM ${imCount()}/${rank().ims} · 🎧 ${pool()}/${rank().bugs}</span><button class="help" id="helpBtn" aria-label="Uitleg">?</button></div>
-   <div class="stats">${bar("Gunst", S.gunst, "#f5c451")}${bar("Geweten", S.geweten, "#4cc38a")}${bar("Verdenking", S.dossier, "#e5484d")}</div>
-   <div class="mk">Mankracht ${"<i class=on></i>".repeat(S.mk)}${"<i></i>".repeat(Math.max(0, rank().mk - S.mk))}<span>Jaardoel: ${S.res}/${S.quota.res} result. · ${imCount()}/${S.quota.ims} IM</span></div>`;
+  $("#hud").innerHTML = `<div class="hrow"><span class="date">${esc(T.label)}</span><span class="rk">${esc(rank().id)}</span><button class="help" id="helpBtn" aria-label="Uitleg">?</button></div>
+   <div class="stats">${bar("Gunst", S.gunst, "sg")}${bar("Geweten", S.geweten, "sc")}${bar("Verdenking", S.dossier, "sd")}</div>
+   <div class="mk"><span class="mkl">MK</span>${"<i class=on></i>".repeat(S.mk)}${"<i></i>".repeat(Math.max(0, rank().mk - S.mk))}<span class="goal">Plan ${T.y}: <b>${S.res}/${S.quota.res}</b> erg. · <b>${imCount()}/${S.quota.ims}</b> IM</span></div>`;
   $("#helpBtn").onclick = showHelp;
   $("#hud .stats").onclick = explainMeters; $("#hud .mk").onclick = explainMeters;
   const unread = S.inbox.filter(i => !i.read).length;
@@ -458,7 +458,7 @@ function refresh() {
   world.setRinging(phone > 0);
   world.setOffice({ folders: unread + pend("dossier"), caseOpen: !!S.case, date: T.label.split(" ").slice(0, -1).join(" ").replace(/^\d+ /, m => m), month: String(T.y), badges: { telefoon: phone ? "!" : "", dossiers: (unread + pend("dossier")) || "", gezin: pend("gezin") ? "!" : "", onderzoek: S.case ? `${S.case.turns} mnd` : "", typemachine: "" } });
   const ims = {}; S.people.filter(p => p.status === "im").forEach(p => ims[p.home] = (ims[p.home] || 0) + 1);
-  const info = {}; BUILDINGS.forEach(b => { let t = ""; if (S.bugs[b.id]) t += " 🎙"; if (ims[b.id]) t += ` <b style="background:#2f5a8a">IM ${ims[b.id]}</b>`; if (S.case && S.case.shown.includes("place") && S.case.home === b.id) t += " <b>!</b>"; info[b.id] = t; });
+  const info = {}; BUILDINGS.forEach(b => { let t = ""; if (S.bugs[b.id]) t += " "; if (ims[b.id]) t += ` <b style="background:#2f5a8a">IM ${ims[b.id]}</b>`; if (S.case && S.case.shown.includes("place") && S.case.home === b.id) t += " <b>!</b>"; info[b.id] = t; });
   world.setDistrict({ info, bugs: S.bugs, ims, winter: !!T.winter, finale: T.key === "1989-nov" });
   $("#navEnd").innerHTML = `Afsluiten<small>naar ${esc((TURNS[S.t + 1] || T).label)}</small>`;
   updateCoach();
@@ -525,7 +525,7 @@ function personView(el, p) {
   }
   let imBox = "";
   if (p.status === "im") {
-    const rel = p.known.dubbel ? "⚠ Dubbelspel ontdekt" : p.lies ? `Laag: ${p.lies} leugen${p.lies > 1 ? "s" : ""} ontdekt` : "Onbekend (controleer rapporten door te observeren)";
+    const rel = p.known.dubbel ? "Dubbelspel ontdekt" : p.lies ? `Laag: ${p.lies} leugen${p.lies > 1 ? "s" : ""} ontdekt` : "Onbekend (controleer rapporten door te observeren)";
     const targets = S.people.filter(q => q !== p && free(q) && (q.home === p.home || (q.work && q.work === p.work)));
     imBox = `<div class="box blue"><div class="kicker">Informant „${esc(p.code)}“</div><div class="clue">Betrouwbaarheid: ${esc(rel)}</div>${p.assign ? `<div class="clue">Opdracht: ${esc(P(p.assign).name)}</div>` : ""}
       <label class="sel">Opdracht geven (1 MK): <select id="assignSel"><option value="">— kies een buur of collega —</option>${targets.map(q => `<option value="${q.id}">${esc(q.name)}</option>`).join("")}</select></label>
@@ -534,7 +534,7 @@ function personView(el, p) {
   el.innerHTML = `<div class="ph"><div><div class="kicker">Akte ${4000 + S.people.indexOf(p) * 37}/85 · ${p.pages} pagina's</div><h2>${esc(p.name)}</h2><div class="who">${esc(p.job)}, ${p.age} jaar</div></div><div class="stampS">${p.status === "vrij" ? "" : esc(p.status.toUpperCase())}</div></div>
    <div class="grid2"><div><small>Woont</small><a data-b="${b.id}">${esc(b.name)}</a></div><div><small>Werkt</small>${p.work && Bd(p.work) ? `<a data-b="${p.work}">${esc(work)}</a>` : esc(work)}</div><div><small>Hoe opstandig?</small>${hostility(p)}</div><div><small>Status</small>${esc(p.status)}</div></div>
    ${p.secretIM ? `<div class="box"><div class="clue">Kaart ‘gesperrt’: inzage alleen voor de Hauptabteilung. Deze persoon is niet beschikbaar voor maatregelen.</div></div>` : ""}
-   <div class="advice">💡 ${personAdvice(p)}</div>
+   <div class="advice">${personAdvice(p)}</div>
    ${caseBox}${imBox}
    <div class="kicker">Wat je weet</div><ul class="traits">${known}</ul>
    ${p.secretIM ? "" : `${info.length ? `<div class="kicker">Informatie verzamelen</div><div class="acts">${info.join("")}</div>` : ""}${hard.length ? `<div class="kicker">Ingrijpen</div><div class="acts">${hard.join("")}</div>` : ""}`}
@@ -618,7 +618,7 @@ function familyView(el) {
   const pend = S.queue.filter(q => ev(q).via === "gezin");
   const g = S.gezin;
   const k = S.flags.alone ? "Katrin en Jens wonen in Rostock. De flat is stil." : g >= 70 ? "Katrin lacht weer om je flauwe grappen. Jens wil later ‘iets met computers’." : g >= 45 ? "Thuis is het rustig. Misschien te rustig." : g >= 25 ? "Katrin vraagt niet meer hoe laat je thuiskomt. Jens zit op zijn kamer." : "Katrin slaapt op de bank. Of jij. Het maakt niet meer uit wie.";
-  el.innerHTML = `<div class="kicker">Gezin</div><h2>Katrin & Jens</h2><div class="statline">${bar("Gezin", g, "#7aa0b0")}</div><p class="who">${esc(k)}</p>
+  el.innerHTML = `<div class="kicker">Gezin</div><h2>Katrin & Jens</h2><div class="statline">${bar("Gezin", g, "sf")}</div><p class="who">${esc(k)}</p>
    ${pend.map((q, i) => `<button class="row hot" data-q="${i}"><span class="rn"><b>${esc(ev(q).title)}</b><small>${esc(ev(q).who || "")}</small></span><span class="rp">!</span></button>`).join("")}
    <div class="acts"><button class="act" id="home" ${S.home || S.mk < 1 ? "disabled" : ""}><b>Vroeg naar huis</b><span>1 MK · gezin +7${S.home ? " · al gedaan" : ""}</span></button></div>
    <p class="muted small">Een laag gezinsniveau heeft gevolgen. Ook voor hoe je verhaal afloopt.</p>`;
@@ -645,10 +645,10 @@ function phoneTap() {
 function showHelp() {
   modal(`<h1>Hulp</h1><div class="result"><b>Kantoor</b>: tik op voorwerpen. Telefoon = opdrachten, map = rapporten, rode map = onderzoek, kast = alle personen, foto = gezin, kaart = wijk.
 <b>Wijk</b>: sleep om te kijken, tik op een gebouw.
-<b>Observeren</b> (1 🟨): ontdek kenmerken van iemand.
-<b>Werven</b> (1 🟨): maak iemand informant (IM). Die verklikt elke beurt een buur. Met chantagemateriaal lukt het vaker. IM's liegen soms.
-<b>Arresteren</b> (2 🟨): kan met 2 bevestigde verdachte kenmerken.
-<b>Microfoons</b> (2 🟨): elke beurt afgeluisterde gesprekken uit een gebouw.
+<b>Observeren</b> (1 ): ontdek kenmerken van iemand.
+<b>Werven</b> (1 ): maak iemand informant (IM). Die verklikt elke beurt een buur. Met chantagemateriaal lukt het vaker. IM's liegen soms.
+<b>Arresteren</b> (2 ): kan met 2 bevestigde verdachte kenmerken.
+<b>Microfoons</b> (2 ): elke beurt afgeluisterde gesprekken uit een gebouw.
 <b>Onderzoek</b>: vergelijk typemachine, papier en adres. Wijs de dader aan.</div>
 <button class="next" id="nx">Oké</button><button class="next ghost" id="ri">Uitleg opnieuw</button>`, m => { m.querySelector("#nx").onclick = closeModal; m.querySelector("#ri").onclick = showIntro; });
 }
@@ -675,13 +675,13 @@ function showTitle() {
 
 // ===================== UITLEG & BEGELEIDING =====================
 const TUT = [
-  { t: "📞 De telefoon gaat. Tik op de <b>telefoon</b> op je bureau om op te nemen.", target: '#labels [data-id="o:telefoon"]', go: () => { setMode("office"); phoneTap(); } },
-  { t: "🗺 Bekijk je wijk: tik onderaan op <b>Wijk</b>.", target: "#navWijk", go: () => { closeSheet(); setMode("district"); } },
-  { t: "🏠 Tik op het gebouw <b>Kollwitz 12</b>. Daar woon jij, met je buren.", target: '#labels [data-id="b:kollwitz"]', go: () => { setMode("district"); openBuilding("kollwitz"); } },
-  { t: "📇 Je ziet wie er woont. Tik op <b>Jutta Lang</b> om haar dossier te openen.", target: '#sheetBody [data-pid="jutta"]', go: () => { openBuilding("kollwitz"); sheet(e => personView(e, P("jutta"))); } },
-  { t: "🔍 Je weet nog niets over haar. Tik op <b>Observeren</b>. Dat kost 1 mankracht (een geel blokje).", target: '#sheetBody [data-a="observe"]', go: () => sheet(e => personView(e, P("jutta"))) },
-  { t: "👍 Zo verzamel je informatie. Gebruik je laatste mankracht: <b>observeer nog iemand</b> uit je flat. Tik hier als je klaar bent.", target: null, go: () => tutDone(5) },
-  { t: "⌨️ Tik op <b>Afsluiten</b> (rechtsonder) of hier. In de volgende beurt ontvang je nieuwe rapporten.", target: "#navEnd", go: () => confirmEnd() },
+  { t: "De telefoon gaat. Tik op de <b>telefoon</b> op je bureau om op te nemen.", target: '#labels [data-id="o:telefoon"]', go: () => { setMode("office"); phoneTap(); } },
+  { t: "Bekijk je wijk: tik onderaan op <b>Wijk</b>.", target: "#navWijk", go: () => { closeSheet(); setMode("district"); } },
+  { t: "Tik op het gebouw <b>Kollwitz 12</b>. Daar woon jij, met je buren.", target: '#labels [data-id="b:kollwitz"]', go: () => { setMode("district"); openBuilding("kollwitz"); } },
+  { t: "Je ziet wie er woont. Tik op <b>Jutta Lang</b> om haar dossier te openen.", target: '#sheetBody [data-pid="jutta"]', go: () => { openBuilding("kollwitz"); sheet(e => personView(e, P("jutta"))); } },
+  { t: "Je weet nog niets over haar. Tik op <b>Observeren</b>. Dat kost 1 mankracht (een geel blokje).", target: '#sheetBody [data-a="observe"]', go: () => sheet(e => personView(e, P("jutta"))) },
+  { t: "Zo verzamel je informatie. Gebruik je laatste mankracht: <b>observeer nog iemand</b> uit je flat. Tik hier als je klaar bent.", target: null, go: () => tutDone(5) },
+  { t: "Tik op <b>Afsluiten</b> (rechtsonder) of hier. In de volgende beurt ontvang je nieuwe rapporten.", target: "#navEnd", go: () => confirmEnd() },
 ];
 function tutDone(n) { if (!S || S.tut !== n) return; S.tut++; if (S.tut === 5 && S.mk <= 0) S.tut = 6; save(); updateCoach(); }
 
@@ -693,21 +693,21 @@ function nextStep() {
   }
   const pend = via => S.queue.find(q => ev(q).via === via);
   let q;
-  if ((q = pend("telefoon"))) return { text: "📞 <b>De telefoon gaat.</b> Tik hier om op te nemen.", go: () => openEvent(q), target: '#labels [data-id="o:telefoon"]' };
-  if ((q = pend("dossier"))) return { text: `📁 <b>Opdracht:</b> ${esc(ev(q).title)}. Tik om te beslissen.`, go: () => openEvent(q) };
-  if ((q = pend("gezin"))) return { text: `🏠 <b>Thuis:</b> ${esc(ev(q).title)}. Tik om het te bekijken.`, go: () => openEvent(q) };
+  if ((q = pend("telefoon"))) return { text: "<b>De telefoon gaat.</b> Tik hier om op te nemen.", go: () => openEvent(q), target: '#labels [data-id="o:telefoon"]' };
+  if ((q = pend("dossier"))) return { text: `<b>Opdracht:</b> ${esc(ev(q).title)}. Tik om te beslissen.`, go: () => openEvent(q) };
+  if ((q = pend("gezin"))) return { text: `<b>Thuis:</b> ${esc(ev(q).title)}. Tik om het te bekijken.`, go: () => openEvent(q) };
   const unread = S.inbox.filter(i => !i.read).length;
-  if (unread) return { text: `📁 <b>${unread} nieuwe rapport${unread > 1 ? "en" : ""}.</b> Tik om te lezen wat je te weten kwam.`, go: () => { setMode("office"); sheet(inboxView); } };
-  if (S.case && S.mk > 0) return { text: `🔴 <b>Onderzoek:</b> vind de dader (nog ${S.case.turns} beurt${S.case.turns > 1 ? "en" : ""}). Tik voor de verdachten.`, go: () => sheet(caseView) };
+  if (unread) return { text: `<b>${unread} nieuwe rapport${unread > 1 ? "en" : ""}.</b> Tik om te lezen wat je te weten kwam.`, go: () => { setMode("office"); sheet(inboxView); } };
+  if (S.case && S.mk > 0) return { text: `<b>Onderzoek:</b> vind de dader (nog ${S.case.turns} beurt${S.case.turns > 1 ? "en" : ""}). Tik voor de verdachten.`, go: () => sheet(caseView) };
   if (S.mk > 0) {
     const lev = S.people.find(p => p.status === "vrij" && !p.family && !p.secretIM && Object.keys(p.known).some(t => TRAITS[t] && TRAITS[t].lev && p.known[t].s === "zeker"));
-    if (lev && imCount() < Math.min(rank().ims, S.quota.ims)) return { text: `👤 <b>${esc(lev.name)}</b> is te chanteren. Werf ${pron(lev)} als informant (je hebt er ${imCount()}/${S.quota.ims} nodig).`, go: () => sheet(e => personView(e, lev)) };
+    if (lev && imCount() < Math.min(rank().ims, S.quota.ims)) return { text: `<b>${esc(lev.name)}</b> is te chanteren. Werf ${pron(lev)} als informant (je hebt er ${imCount()}/${S.quota.ims} nodig).`, go: () => sheet(e => personView(e, lev)) };
     const arr = S.people.find(p => p.status === "vrij" && !p.family && evidence(p) && p.dis >= 30);
-    if (arr && S.mk >= 2 && S.res < S.quota.res) return { text: `⚖️ Je hebt genoeg bewijs tegen <b>${esc(arr.name)}</b>. Arresteren levert een resultaat op. Of laat je het?`, go: () => sheet(e => personView(e, arr)) };
-    if (pool() < rank().bugs && S.mk >= 2) return { text: `🎙 Plaats <b>microfoons</b> in een gebouw (2 mankracht): elke beurt hoor je dan gesprekken.`, go: () => setMode("district") };
-    return { text: `🟨 Nog <b>${S.mk} mankracht</b>. Ga naar de wijk en observeer iemand die je nog niet kent.`, go: () => setMode("district") };
+    if (arr && S.mk >= 2 && S.res < S.quota.res) return { text: `Je hebt genoeg bewijs tegen <b>${esc(arr.name)}</b>. Arresteren levert een resultaat op. Of laat je het?`, go: () => sheet(e => personView(e, arr)) };
+    if (pool() < rank().bugs && S.mk >= 2) return { text: `Plaats <b>microfoons</b> in een gebouw (2 mankracht): elke beurt hoor je dan gesprekken.`, go: () => setMode("district") };
+    return { text: `Nog <b>${S.mk} mankracht</b>. Ga naar de wijk en observeer iemand die je nog niet kent.`, go: () => setMode("district") };
   }
-  return { text: "⌨️ <b>Alles gedaan.</b> Tik hier om de beurt af te sluiten.", go: () => confirmEnd(), target: "#navEnd" };
+  return { text: "<b>Alles gedaan.</b> Tik hier om de beurt af te sluiten.", go: () => confirmEnd(), target: "#navEnd" };
 }
 let coachStep = null;
 function updateCoach() {
@@ -725,14 +725,14 @@ setInterval(() => {
 
 function showIntro() {
   const pages = [
-    ["Jij bent de Stasi", "🕵️", "Oost-Berlijn, 1985. Jij houdt één wijk in de gaten voor de geheime dienst van de DDR.\n\nJe baas <b>Kessler</b> wil resultaten. Jouw keuzes bepalen wat er met de mensen gebeurt."],
-    ["Zo speel je", "🔁", "<b>1.</b> Beslis wat er gebeurt als de telefoon gaat.\n<b>2.</b> Gebruik je <b>mankracht</b> 🟨 in de wijk: mensen <b>observeren</b>, <b>informanten werven</b>, <b>arresteren</b>.\n<b>3.</b> Tik op <b>Afsluiten</b>. Op naar de volgende beurt.\n\nOnderaan staat altijd wat je nu kunt doen."],
-    ["Pas op", "⚖️", "<b>Gunst</b> op 0: je wordt ontslagen.\n<b>Verdenking</b> op 100: je wordt zelf opgepakt.\nJe <b>geweten</b> bepaalt hoe jouw verhaal afloopt.\n\n15 beurten tot de val van de Muur. 8 eindes."],
+    ["Jij bent de Stasi", "", "Oost-Berlijn, 1985. Jij houdt één wijk in de gaten voor de geheime dienst van de DDR.\n\nJe baas <b>Kessler</b> wil resultaten. Jouw keuzes bepalen wat er met de mensen gebeurt."],
+    ["Zo speel je", "", "<b>1.</b> Beslis wat er gebeurt als de telefoon gaat.\n<b>2.</b> Gebruik je <b>mankracht</b> in de wijk: mensen <b>observeren</b>, <b>informanten werven</b>, <b>arresteren</b>.\n<b>3.</b> Tik op <b>Afsluiten</b>. Op naar de volgende beurt.\n\nOnderaan staat altijd wat je nu kunt doen."],
+    ["Pas op", "", "<b>Gunst</b> op 0: je wordt ontslagen.\n<b>Verdenking</b> op 100: je wordt zelf opgepakt.\nJe <b>geweten</b> bepaalt hoe jouw verhaal afloopt.\n\n15 beurten tot de val van de Muur. 8 eindes."],
   ];
   let i = 0;
   const draw = () => {
     const [h, ic, txt] = pages[i];
-    modal(`<div class="bigic">${ic}</div><h1>${h}</h1><div class="result">${txt}</div>
+    modal(`<div class="kicker">Einweisung ${i + 1}/${pages.length}</div><h1>${h}</h1><div class="result">${txt}</div>
       <div class="dots">${pages.map((_, k) => `<i class="${k === i ? "on" : ""}"></i>`).join("")}</div>
       <button class="next" id="nx">${i < pages.length - 1 ? "Verder" : "Spelen"}</button>${i === 0 ? '<button class="next ghost" id="sk">Overslaan</button>' : ""}`, m => {
       m.querySelector("#nx").onclick = () => { if (i < pages.length - 1) { i++; draw(); } else { closeModal(); updateCoach(); } };
@@ -746,7 +746,7 @@ function explainMeters() {
   modal(`<h1>De meters</h1><div class="result"><b class="cg">Gunst</b>: hoe tevreden Kessler is. Op 0 ben je ontslagen.
 <b class="cc">Geweten</b>: daalt als je mensen schade doet. Bepaalt je einde.
 <b class="cd">Verdenking</b>: hoe verdacht jij zelf bent. Op 100 word je opgepakt.
-<b class="cm">Mankracht</b> 🟨: acties per beurt. Wat je niet gebruikt, vervalt.
+<b class="cm">Mankracht</b> : acties per beurt. Wat je niet gebruikt, vervalt.
 <b>Jaardoel</b>: wat Kessler in de herfst wil zien. Haal het en je krijgt promotie.</div><button class="next" id="nx">Oké</button>`, m => m.querySelector("#nx").onclick = closeModal);
 }
 

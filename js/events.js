@@ -4,7 +4,7 @@
 export const STORY = {
   "1985-0": [{
     id: "intro", via: "telefoon", title: "Welkom op de Kreisdienststelle", who: "Major Horst Kessler — je chef",
-    text: "‘Leutnant. Uw bureau, uw wijk: Prenzlauer Berg. Kunstenaars, dominees, klagers. Ik wil weten wat ze denken vóórdat ze het zelf weten.\n\nU heeft beperkte mankracht per maand. Gebruik die in de wijk: observeren, afluisteren, informanten werven. Elk jaar in november beoordeel ik u op resultaten en op uw netwerk van IM's.\n\nEn Leutnant — iedereen wordt in de gaten gehouden. Ook wij.’",
+    text: "‘Leutnant. Uw bureau, uw wijk: Prenzlauer Berg. Kunstenaars, dominees, klagers. Ik wil weten wat ze denken vóórdat ze het zelf weten.\n\nU heeft beperkte mankracht per beurt. Gebruik die in de wijk: observeren, afluisteren, informanten werven. Elk jaar in de herfst beoordeel ik u op resultaten en op uw netwerk van IM's.\n\nEn Leutnant — iedereen wordt in de gaten gehouden. Ook wij.’",
     choices: [{ t: "‘Jawohl, Genosse Major.’", d: "De telefoon klikt.", e: {}, r: "Je legt de hoorn neer. Op je bureau ligt al een stapel dossiers. Tik op de kaart aan de muur om de wijk te bekijken." }]
   }],
   "1985-1": [{

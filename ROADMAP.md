@@ -14,6 +14,15 @@ We werken in fases. Elke fase krijgt een eigen branch (`fase-N`) en wordt daarna
 - [x] PS2-graphics: rendering op lage resolutie (±460p), 15-bit kleur met ordered dither, Lambert-shading met facetten, pixelige texturen, harde schaduwen, low-poly mensen met lopende benen
 - [x] Op GitHub gezet
 
+## ✅ Fase 1b: Eigen stijl en Oost-Berlijn
+
+- [x] Eigen huisstijl: stalen HUD met LED-meters, Dymo-labels, telexstroken, dossierpapier (Oswald, VT323, Plex)
+- [x] Geen emoji's of generieke 'app'-look meer
+- [x] De wijk als echt Prenzlauer Berg: dichte Altbau-blokken met roet, afgebladderd pleisterwerk, winkeltjes (HO, Kohlenhandlung), brandmuren met reclame
+- [x] Plattenbau WBS 70 met loggia's, dakleus 'Berlin · Hauptstadt der DDR', spandoek
+- [x] Kinderkopjes, Berliner Gehweg, Peitschenleuchten, litfaßzuilen, telefooncel
+- [x] Tatra-tram met bovenleiding, DDR-vlaggen, rokende schoorstenen, bruinkoolsmog, grotere Fernsehturm
+
 ## Fase 2: De wijk leeft
 
 - [ ] Bewoners lopen echt rond als personages. Tik op iemand op straat om het dossier te openen.
