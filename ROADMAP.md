@@ -70,14 +70,35 @@ De belangrijkste blokjes zijn vervangen door echte low-poly modellen. Lukt het l
 - [x] 8 basisfiguren (arbeider, oude vrouw, punk, dominee, Vopo, Stasi-man in leren jas, burger, burgeres) met skelet; armen en benen bewegen al mee bij het lopen
 - [ ] Kessler, Fuchs, Katrin en Jens als eigen modellen
 
-## Fase 3: Animaties
+## Fase 3: Tempo, geschiedenis, sfeer en RPG
 
 **Fixes**
 - [ ] Opdrachten verdwijnen na één beslissing (nu kun je ze opnieuw openen en kiezen)
 - [ ] Postvak in overzichtelijker: opdrachten bovenaan, berichten per beurt, soort als label, oudere beurten ingeklapt
 
+**Tempo en geschiedenis**
+- [ ] Langzamer: begin in 1983, ±30 beurten in plaats van 15
+- [ ] Echte gebeurtenissen met gecontroleerde datums (vredesbeweging, Umweltbibliothek, Bowie-concert 1987, Sputnik-verbod, verkiezingsfraude 1989, 7 oktober, 4 en 9 november)
+
+**DDR-sfeer**
+- [ ] Radio, *Aktuelle Kamera*, krantenkoppen van *Neues Deutschland*, feestdagen op de kalender
+- [ ] Rijen voor Bückware, Westpakete, Intershop, Subbotnik, FDJ, kolenkachelrook, leuzen per jaar
+
+**Interactieve wereld**
+- [ ] Tik op voorbijgangers: wie is het, kort gesprek of observatie
+- [ ] Gebouwen in: trappenhuis, woning, Kneipe, Kaufhalle, Konspirative Wohnung, telefooncel
+- [ ] Voorwerpen die iets doen (radio, krant, lades)
+
+**RPG**
+- [ ] Ervaringspunten en vaardigheden (Observatie, Verhoor, Overtuigen, Techniek, Geheimhouding)
+- [ ] Gesprekskeuzes met vaardigheidschecks
+- [ ] Inventaris (Westgeld, koffie, cassettes, Minox, afluistersets) om informanten te betalen of om te kopen
+- [ ] Reputatie (MfS, buurt, kerk, gezin) en bijmissies per bewoner
+
 **Publicatie**
 - [x] Vercel-project `akte-ostberlin`, gekoppeld aan GitHub: elke push naar `main` gaat live op de hoofdlink (geen previews)
+
+## Fase 4: Animaties
 
 **Eerste-persoonshanden in het kantoor** (rigged handen, bijv. via itch.io of Blender Rigify)
 - [ ] Hoorn van de telefoon oppakken en tegen het oor houden als hij gaat
@@ -101,14 +122,14 @@ De belangrijkste blokjes zijn vervangen door echte low-poly modellen. Lukt het l
 - [ ] three.js `AnimationMixer` met overgangen tussen clips
 - [ ] Eén `.glb` per personage met meerdere animaties
 
-## Fase 4: De wijk leeft
+## Fase 5: De wijk leeft
 
 - [ ] Bewoners lopen echt rond als personages. Tik op iemand op straat om het dossier te openen.
 - [ ] Gebouwen tonen wat je weet (microfoons, informanten, verdachten)
 - [ ] Dag en nacht per beurt, straatverlichting
 - [ ] Weer: regen, mist, sneeuw
 
-## Fase 5: Nieuwe spelonderdelen
+## Fase 6: Nieuwe spelonderdelen
 
 - [ ] **Verhoor**: een gesprek in de verhoorkamer met keuzes. Zoek de tegenstrijdigheid in iemands verhaal.
 - [ ] **Bandrecorder**: luister afgeluisterde gesprekken terug op een spoelenrecorder, spoel heen en weer en markeer verdachte zinnen
@@ -122,19 +143,19 @@ De belangrijkste blokjes zijn vervangen door echte low-poly modellen. Lukt het l
 - [ ] **Nieuws**: radio en krant met echte gebeurtenissen (Gorbatsjov, Hongarije, Leipzig)
 - [ ] **Epiloog in 3D**: in 1992 lees je in de leeszaal van het Stasi-archief je eigen dossier
 
-## Fase 6: Geluid en sfeer
+## Fase 7: Geluid en sfeer
 
 - [ ] Geluid: typemachine, telefoon, radio, regen, tram, voetstappen
 - [ ] Muziek per jaar (1985 kil, 1989 opwindend)
 - [ ] Trillen bij belangrijke momenten (iPhone)
 
-## Fase 7: Meer verhaal
+## Fase 8: Meer verhaal
 
 - [ ] Rivaal Fuchs krijgt een eigen verhaallijn
 - [ ] Meer eindes en een galerij van ontdekte eindes
 - [ ] Moeilijkheidsgraden en een vrije modus zonder verhaal
 
-## Fase 8: Afwerking
+## Fase 9: Afwerking
 
 - [ ] Balans (moeilijkheid, kansen)
 - [ ] Speelbaar via GitHub Pages en als app-icoon op het beginscherm (PWA)

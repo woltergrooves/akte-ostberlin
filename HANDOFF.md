@@ -36,14 +36,38 @@ Lees dit bestand eerst. Het wordt na elke fase bijgewerkt.
 6. Antwoord kort en in het Nederlands. Eindig met de korte prompt voor de volgende chat.
 
 ## Status
-- Klaar: fase 1, fase 1b en fase 2.
+- Klaar: fase 1, fase 1b en fase 2. Speelbaar op https://akte-ostberlin.vercel.app (alleen deze link gebruiken).
 
-## Volgende fase: FASE 3, animaties + twee fixes
-**Eerst deze fixes (gevraagd door de gebruiker):**
-- **Opdrachten zijn herbruikbaar (bug).** Na een beslissing kun je dezelfde opdracht opnieuw openen en kiezen, waardoor de gevolgen opnieuw worden toegepast. Oorzaak: `inboxView()` en het telefoonoverzicht (`data-q`-knoppen) houden een verwijzing naar het event vast; na `chooseEvent()` wordt het open sheet niet opnieuw getekend, en `openEvent()`/`chooseEvent()` controleren niet of `q` nog in `S.queue` staat. Fix: in beide functies stoppen als `!S.queue.includes(q)`, het sheet na een keuze opnieuw renderen (`rerender()`), en de knop direct uitschakelen bij het openen. Test: dezelfde opdracht twee keer proberen → tweede keer niets.
-- **Postvak in overzichtelijker.** Nu één lange lijst (`inboxView`). Maak het scanbaar: bovenaan wachtende opdrachten en het onderzoek, daarna berichten gegroepeerd per beurt (nieuw/ongelezen apart van eerder gelezen), soort zichtbaar (IM-rapport, microfoon, waarschuwing, info) met een Dymo-label, korte eerste regel met uitklappen voor de rest, en oudere beurten ingeklapt. Huisstijl blijven gebruiken (telex/dossierpapier).
+## Volgende fase: FASE 3, gameplay-herziening (wensen van de gebruiker, 17 nov)
+De gebruiker wil dit vóór de animaties (die schuiven naar fase 4). Is het te veel voor één chat, doe dan eerst A en B, daarna C–E, en werk de handoff bij met wat nog openstaat.
 
-**Daarna de animaties:**
+**A. Twee fixes**
+- **Opdrachten zijn herbruikbaar (bug).** Na een beslissing kun je dezelfde opdracht opnieuw openen en kiezen, en dan worden de gevolgen opnieuw toegepast. Oorzaak: `inboxView()` en het telefoonoverzicht (`data-q`-knoppen) houden een verwijzing naar het event vast. Na `chooseEvent()` wordt het open sheet niet opnieuw getekend, en `openEvent()`/`chooseEvent()` controleren niet of `q` nog in `S.queue` staat. Fix: in beide functies stoppen als `!S.queue.includes(q)`, het sheet na een keuze opnieuw renderen (`rerender()`), en de knop direct uitschakelen bij het openen. Test: dezelfde opdracht twee keer proberen → de tweede keer gebeurt er niets.
+- **Postvak in overzichtelijker.** Nu is het één lange lijst (`inboxView`). Maak het scanbaar: bovenaan wachtende opdrachten en het onderzoek, daarna berichten per beurt (ongelezen apart), het soort bericht als Dymo-label (IM-rapport, microfoon, waarschuwing, info), alleen de eerste regel met uitklappen, en oudere beurten ingeklapt. Huisstijl aanhouden.
+
+**B. Tempo en tijdlijn: langzamer, eerder beginnen, historisch kloppend**
+- Het spel gaat nu te snel (15 beurten, 1985–1989). Voorstel: begin in **1983** en maak het ±30 beurten (vier per jaar, met extra beurten rond 1987 en in de herfst van 1989). Meer tijd per beurt om de wijk te verkennen.
+- Gebruik echte gebeurtenissen met kloppende datums en **controleer elke datum met een webbron** voordat je hem gebruikt. Kandidaten: vredesbeweging "Schwerter zu Pflugscharen" (1982–83), ausreisegolf 1984, Gorbatsjov aan de macht (maart 1985), Tsjernobyl (april 1986), Umweltbibliothek in de Zionskirche (1986), Bowie-concert bij de Reichstag en de rellen Unter den Linden (juni 1987), Honecker in Bonn (sept. 1987), aanval van skinheads in de Zionskirche (okt. 1987), inval in de Umweltbibliothek (nov. 1987), Liebknecht-Luxemburg-demonstratie met arrestaties (jan. 1988), verbod op Sputnik (nov. 1988), verkiezingsfraude (mei 1989), Neues Forum (sept. 1989), 40 jaar DDR en 9 oktober in Leipzig, 4 november op de Alexanderplatz, 9 november.
+- Pas `TURNS` in `data.js` en de verhaalgebeurtenissen in `events.js` aan, en ook de quota en de jaarbeoordelingen. Oude saves (`akte-save-v3`) ongeldig maken met een nieuwe save-key.
+
+**C. DDR-sfeer**
+- Radio (DT64, Stimme der DDR) en *Aktuelle Kamera* met nieuws van de beurt, krantenkoppen van *Neues Deutschland* op de krant op het bureau, de kalender met echte feestdagen (1 mei, 7 oktober).
+- In de wijk: rijen voor de Kaufhalle bij "Bückware", Westpakete, Intershop, wachtlijst voor de Trabant, Subbotnik, FDJ-blauwhemden en pioniers, kolenkachelrook in de winter, spandoeken met leuzen die per jaar wisselen.
+- Geen clichés zonder context: kleine, concrete details die kloppen.
+
+**D. De wereld interactief**
+- Tik op voorbijgangers in de wijk: wie het is, kort gesprek of observatie (koppel ze aan de bewoners uit `data.js`).
+- Gebouwen in: trappenhuis en woning als kleine 3D-scène, de Kneipe (Café Mosaik), de Kaufhalle, een Konspirative Wohnung, de telefooncel, de litfaßzuil met affiches.
+- Voorwerpen in het kantoor en de wijk die iets doen (radio aan, krant lezen, la open).
+
+**E. RPG-elementen**
+- Speler: ervaringspunten uit zaken en rapporten, rang hangt daarvan af. Vaardigheden die je verbetert: Observatie, Verhoor, Overtuigen, Techniek (microfoons), Geheimhouding. Ze beïnvloeden de kansen die het spel al toont.
+- Keuzes in gesprekken met vaardigheidschecks (kans in procenten zichtbaar, in de huidige stijl).
+- Inventaris: Westgeld, Jacobs-koffie, cassettes, Minox-camera, afluistersets. Te gebruiken om informanten te betalen of mensen om te kopen.
+- Relaties en reputatie: bij Kessler/MfS, de buurt, de kerk en het gezin. Bijmissies per bewoner (kleine verhaallijnen).
+- Het moet een simulator blijven op de iPhone: kort per scherm, één duidelijke keuze tegelijk.
+
+## Fase 4: animaties (was fase 3)
 - Eerste-persoonshanden in het kantoor: hoorn oppakken als de telefoon gaat (node `Handset`), dossier pakken en openslaan, stempelen bij een beslissing ("GENEHMIGT"/"ABGELEHNT", node `Stamp`), typen bij Afsluiten met papier dat eruit wordt getrokken (`Carriage`, `Paper`). Handen eventueel zelf bouwen als low-poly rigid parts.
 - Camera: rondkijken in het kantoor, vlucht door het raam naar de wijk, inzoomen op een getikt gebouw.
 - Wijk: echte loop-, sta- en praatanimaties voor de figuren. Probeer eerst de Quaternius *Universal Animation Library* (CC0) via GitHub-mirrors. Lukt dat niet, maak dan clips met keyframes op de botten (`AnimationClip` met `QuaternionKeyframeTrack`) en vervang daarmee `posePerson()`.
