@@ -49,7 +49,7 @@ const repV = k => k === "gezin" ? S.gezin : k === "mfs" ? S.gunst : S.rep[k];
 const churchy = p => p.traits.some(t => ["kerk", "vrede", "milieu"].includes(t)) || p.work === "kerk";
 function gainXP(n) {
   if (!n || !S) return; const before = points(); S.xp += n;
-  while (S.rank < RANKS.length - 1 && S.xp >= RANKS[S.rank + 1].xp) { S.rank++; S.promo = (S.promo || 0) + 1; }
+  while (S.rank < RANKS.length - 1 && S.xp >= RANKS[S.rank + 1].xp) { S.rank++; S.promo = (S.promo || 0) + 1; svc("promo", `Promoted to ${RANKS[S.rank].id}.`); }
   if (points() > before) S.flags._sp = true;
 }
 // kans bij een gesprek: basis + vaardigheid + reputatie − angst/wrok
@@ -60,7 +60,7 @@ function showPromo(next) {
     <div class="result">‘Experience counts, comrade. They are talking about you at Normannenstraße.’\n\nFrom next turn: ${rank().mk} manpower, room for ${rank().ims} IMs and ${rank().bugs} bugging sets.</div><button class="next" id="nx">Continue</button>`, m => m.querySelector("#nx").onclick = () => { closeModal(); if (next) next(); }, { lock: true });
 }
 function invAdd(k, n = 1) { S.inv[k] = Math.max(0, (S.inv[k] || 0) + n); }
-function medal(id) { if (award(id)) { sfx.fanfare(); toast(`<b>Decoration:</b> ${esc(MEDALS[id].t)}`); } }
+function medal(id) { if (S && MEDALS[id] && !(S.service || []).some(x => x.k === "medal" && x.txt === MEDALS[id].t)) svc("medal", MEDALS[id].t); if (award(id)) { sfx.fanfare(); toast(`<b>Decoration:</b> ${esc(MEDALS[id].t)}`); } }
 // ---------- verbanden en dossiercompleetheid (prikbord) ----------
 const conf = (p, t) => p.known[t] && p.known[t].s === "zeker";
 const linksOf = p => S.links.filter(l => l.a === p.id || l.b === p.id);
@@ -80,11 +80,13 @@ function secrets(p) { return p.traits.length + linksOf(p).length; }
 function completion(p) { const tot = secrets(p); if (!tot) return 100; const k = p.traits.filter(t => conf(p, t)).length + linksOf(p).filter(l => l.found).length; return Math.round(k / tot * 100); }
 // ---------- eigen dossier: wat ze over jou hebben ----------
 let evCtx = "";
+// staat van dienst (fase 3F): mijlpalen voor de Kaderakte
+function svc(k, txt) { if (!S) return; if (!S.service) S.service = []; S.service.push({ t: S.t, k, txt }); if (S.service.length > 120) S.service.shift(); }
 function ownNote(txt) { S.ownLog.push(`${turn().label}: ${txt}`); if (S.ownLog.length > 40) S.ownLog.shift(); }
 function addLog(p, text) { if (p) p.log.push(`${turn().label}: ${text}`); }
 function inbox(k, title, text, pid) { S.inbox.unshift({ id: uid(), k, title, text, pid, t: S.t, read: false }); if (S.inbox.length > 60) S.inbox.length = 60; }
 function nextCode() { const c = CODES.find(c => !S.codes.includes(c)) || "X-" + S.codes.length; S.codes.push(c); return c; }
-function makeIM(p, code) { if (!p) return; p.status = "im"; p.code = code || nextCode(); if (code) S.codes.push(code); p.lies = 0; S.stats.recruits++; addLog(p, `Recruited as IM „${p.code}“`);
+function makeIM(p, code) { if (!p) return; p.status = "im"; p.code = code || nextCode(); if (code) S.codes.push(code); p.lies = 0; S.stats.recruits++; addLog(p, `Recruited as IM „${p.code}“`); svc("im", `${p.name} signs as IM „${p.code}“.`);
   p.need = p.need || rand(Object.keys(NEEDS)); p.loyal = Math.max(20, p.loyal || 30); p.lastTreff = S.t; if (imCount() >= 6) medal("netz"); }
 
 const A = {
@@ -117,6 +119,7 @@ function newGame(mods = []) {
     quota: null, later: [], home: false, tut: 0, stats: { arrests: 0, recruits: 0, zersetzung: 0, solved: 0, wrong: 0, observe: 0, complete: 0 }, codes: [], over: null,
   };
   S.links = makeLinks(S.people, seed);
+  S.service = []; svc("start", `Assigned to the Kreisdienststelle Prenzlauer Berg as ${RANKS[S.rank].id}.`);
   if (mods.includes("hase")) { S.rank = 1; S.xp = RANKS[1].xp; S.spent = Math.floor(S.xp / XP_PER_POINT); }
   startTurn();
 }
@@ -359,16 +362,26 @@ function openEvent(q) {
 function chooseEvent(q, c) {
   if (!S.queue.includes(q)) return;   // dubbel tikken of oud scherm: niets doen
   S.queue = S.queue.filter(x => x !== q);
-  evCtx = ev(q).title; applyE(c.e); evCtx = ""; if (c.flag) S.flags[c.flag] = true; sfx.stamp();
+  const stampIt = ev(q).via === "dossier" && world.getMode() === "office" && !world.holding();
+  evCtx = ev(q).title; applyE(c.e); evCtx = ""; if (c.flag) S.flags[c.flag] = true; if (!stampIt) sfx.stamp();
   if (c.fx) c.fx(S, A, q.ctx);
   if (c.fate) S.fates[c.fate[0]] = c.fate[1];
   const e = ev(q); if (e.person) addLog(P(e.person), `${e.title}: ${c.t}`);
   if (e.id === "intro") tutDone(0);
   if (e.id === "fuchs") S.flags.fuchsMet = true;
   save(); refresh(); rerender();
+  // fase 4: in het kantoor eerst de stempel op het papier, dan het resultaat
+  if (stampIt) { $("#modal").className = "modal"; return world.act("stamp", (c.e && (c.e.g || 0) < 0) || (c.e && (c.e.c || 0) > 0 && !(c.e.g > 0)) ? "ABGELEHNT" : "GENEHMIGT", () => showChoice(q, c, e)); }
+  showChoice(q, c, e);
+}
+function showChoice(q, c, e) {
   modal(`<div class="kicker">${esc(turn().label)} · ${esc(c.t)}</div><h1>${esc(e.title)}</h1>
     <div class="result">${esc(sub(c.r, q.ctx))}</div>${chips(c.e)}<button class="next" id="nx">${c.end ? "Continue →" : "Back to work"}</button>`,
-    m => m.querySelector("#nx").onclick = () => { closeModal(); if (c.end && (c.flag === "shred" || c.flag === "walk")) return shredPicker(c.flag, () => finish()); if (c.end) return finish(c.flag === "fled" ? "overgelopen" : null); if (!checkOver()) { nextPending(); if (S.promo) showPromo(); } }, { lock: true });
+    m => m.querySelector("#nx").onclick = () => { closeModal();
+      const go = () => { if (c.end && (c.flag === "shred" || c.flag === "walk")) return shredPicker(c.flag, () => finish()); if (c.end) return finish(c.flag === "fled" ? "overgelopen" : null); if (!checkOver()) { nextPending(); if (S.promo) showPromo(); } };
+      // fase 4: 9 november, de Muur gaat open
+      if (e.id === "muur" && !S.flags._mauerFilm) { S.flags._mauerFilm = true; save(); return world.cinematic("mauer", { caption: "<b>9 November 1989 · 23:30</b>Bornholmer Straße. The barrier goes up." }, go); }
+      go(); }, { lock: true });
 }
 // ---------- november 1989: welke dossiers vernietig je? ----------
 function shredPicker(mode, done) {
@@ -447,13 +460,13 @@ const ACT = {
   zersetzung(p) {
     if (p.pages < 15) return toast("You know too little about this person (file < 15 pages).");
     if (!spend(2)) return;
-    const hostile = p.dis >= 30; p.dis = Math.max(0, p.dis - 45); p.status = "zersetzt"; p.pages += 25; S.stats.zersetzung++; addLog(p, "Zersetzung");
+    const hostile = p.dis >= 30; p.dis = Math.max(0, p.dis - 45); p.status = "zersetzt"; p.pages += 25; S.stats.zersetzung++; addLog(p, "Zersetzung"); svc("zers", `Zersetzung ordered against ${p.name}.`);
     after(`<h1>Maßnahme: Zersetzung</h1><div class="result">${esc(rand(ZERS))}\n\nWithin a few months ${esc(p.name)} trusts nobody any more. Exactly as intended.</div>`, { c: -12, g: hostile ? 5 : 1, res: hostile ? 1 : 0, o: -2, xp: XP.zers, bu: -2, ki: churchy(p) ? -5 : 0 });
   },
   arrest(p) {
     if (!evidence(p)) return toast("Not enough evidence: you need at least two confirmed suspicious traits.");
     if (!spend(2)) return;
-    const hostile = p.dis >= 30; p.status = "gevangen"; p.pages += 20; S.stats.arrests++; addLog(p, "Arrested, taken to Hohenschönhausen"); S.flags._arrested = p.name; sfx.stamp();
+    const hostile = p.dis >= 30; p.status = "gevangen"; p.pages += 20; S.stats.arrests++; addLog(p, "Arrested, taken to Hohenschönhausen"); S.flags._arrested = p.name; S.flags._arrestBld = p.home; svc("arrest", `${p.name} arrested, taken to Hohenschönhausen.`); sfx.stamp();
     if (p.family) { S.flags.betray = true; S.fates[p.id] = "Was arrested by his own brother. Spent fourteen months in Bautzen. Never exchanged another word with you."; }
     const late = turn().y >= 1988;
     after(`<h1>Arrest</h1><div class="result">Five in the morning. ${esc(p.name)} is allowed to pack a bag. The neighbours watch through the cracks of their doors.${late ? "\n\nBut by now fear works differently: the following Sunday the church is fuller than ever." : ""}</div>`, { c: hostile ? -8 : -15, g: hostile ? 6 : 2, res: hostile ? 1 : 0, o: late ? 2 : -4, fam: p.family ? -30 : 0, xp: XP.arrest, bu: -5, ki: churchy(p) ? -8 : 0 });
@@ -477,6 +490,7 @@ function accuse(p) {
   const c = S.case; if (!c) return;
   const right = p.id === c.culprit;
   S.case = null; p.caught = true; p.pages += 15; addLog(p, `Named as the culprit: ${INCIDENTS[c.tmpl].t.toLowerCase()}`);
+  svc(right ? "case" : "wrong", right ? `Case closed: ${INCIDENTS[c.tmpl].t}. ${p.name} was the culprit.` : `Case closed: ${INCIDENTS[c.tmpl].t}. ${p.name} named. (Wrongly, though nobody knows.)`);
   if (right) { S.stats.solved++; applyE({ g: 6, res: 1, xp: XP.solved }); if (S.stats.solved >= 5) medal("spuer"); }
   else { S.stats.wrong++; S.wrongs.push({ innocent: p.id, culprit: c.culprit, month: turn().label }); applyE({ g: 4, res: 1, xp: XP.wrong }); }
   save(); refresh();
@@ -521,6 +535,9 @@ function advance() {
   if (S.tut !== undefined && S.tut < 99) { S.tut = 99; S.flags._tutJustDone = true; }
   S.t++;
   if (S.t >= TURNS.length) return finish();
+  // fase 4: na een arrestatie eerst het filmpje van vijf uur 's ochtends
+  const zb = S.flags._arrestBld;
+  if (zb) { const nm = S.flags._arrested; S.flags._arrestBld = null; save(); return world.cinematic("zugriff", { bid: zb, caption: `<b>Zugriff · 05:00</b>${esc(nm || "")}` }, () => { setMode("office"); startTurn(); }); }
   startTurn();
 }
 function review(next) {
@@ -532,6 +549,7 @@ function review(next) {
   else { lines.push("\nKessler closes the door. ‘I am beginning to wonder whose side you are on, comrade.’ A note goes into your personnel file."); e = S.mods.includes("kessler") ? { g: -24, d: 16 } : { g: -12, d: 8 }; }
   if (turn().y === 1987 && S.flags.leak) { lines.push("\nAs you leave: ‘Someone warned that church. I will find out who.’"); e.d = (e.d || 0) + 6; }
   if (turn().y === 1988 && S.flags.cover) { lines.push("\nKessler puts a copy on the table. The report about your brother. ‘The original went missing. Strange, isn't it?’"); e.d = (e.d || 0) + 8; e.g = (e.g || 0) - 5; }
+  svc("review", `Annual assessment ${turn().y}: ${okR && okI ? "excellent" : okR || okI ? "adequate" : "failed"}.`);
   evCtx = "annual assessment"; applyE(e); evCtx = ""; save(); refresh();
   modal(`<div class="stamp">BEURTEILUNG</div><div class="kicker">${esc(turn().label)}</div><h1>Annual assessment ${turn().y}</h1><div class="result">${esc(lines.join("\n"))}</div>${chips(e)}<button class="next" id="nx">Continue →</button>`,
     m => m.querySelector("#nx").onclick = () => { closeModal(); if (S.promo) return showPromo(next); next(); }, { lock: true });
@@ -605,7 +623,7 @@ function refresh() {
   $("#hud").innerHTML = `<div class="hrow"><span class="date">${esc(T.label)}</span><button class="rk" id="rkBtn">${esc(rank().id)}${points() > 0 ? `<b>+${points()}</b>` : ""}</button><button class="help" id="helpBtn" aria-label="Help">?</button></div>
    <div class="stats">${bar("Favour", S.gunst, "sg")}${bar("Conscience", S.geweten, "sc")}${bar("Suspicion", S.dossier, "sd")}</div>
    <div class="mk"><span class="mkl">MP</span>${"<i class=on></i>".repeat(S.mk)}${"<i></i>".repeat(Math.max(0, rank().mk - S.mk))}<span class="goal">Plan ${T.y}: <b>${S.res}/${S.quota.res}</b> res. · <b>${imCount()}/${S.quota.ims}</b> IM</span></div>`;
-  $("#helpBtn").onclick = showHelp; $("#rkBtn").onclick = () => sheet(kaderView);
+  $("#helpBtn").onclick = showHelp; $("#rkBtn").onclick = () => openKader();
   // LED's knipperen bij een verandering
   const nowV = { sg: S.gunst, sc: S.geweten, sd: S.dossier };
   Object.entries(nowV).forEach(([k, v]) => { if (lastV[k] !== undefined && lastV[k] !== v) { const e = $(`#hud .stat.${k}`); if (e) { e.classList.add(v > lastV[k] ? "pulseUp" : "pulseDown"); } } lastV[k] = v; });
@@ -664,7 +682,7 @@ function modal(html, mount, opt = {}) {
   const m = $("#modal"); m.className = "modal open" + (opt.wide ? " wide" : ""); m.dataset.lock = opt.lock ? "1" : "";
   $("#modalCard").innerHTML = html; $("#modalCard").scrollTop = 0; if (mount) mount($("#modalCard"));
 }
-function closeModal() { $("#modal").className = "modal"; }
+function closeModal() { $("#modal").className = "modal"; if (world && world.holding()) world.act("phoneDown"); }
 let flashT;
 function flash(html) { const f = $("#flash"); f.innerHTML = html; f.classList.add("show"); clearTimeout(flashT); flashT = setTimeout(() => f.classList.remove("show"), 4500); f.onclick = () => f.classList.remove("show"); }
 let toastT;
@@ -747,7 +765,7 @@ function personView(el, p) {
 
 function openBuilding(id) {
   if (id === "booth" || id === "litfass") { tutDone(99); return enterInterior(id); }
-  world.select(id); sheet(el => buildingView(el, id)); tutDone(2);
+  world.select(id); if (world.getMode() === "district") world.focus(id); sheet(el => buildingView(el, id)); tutDone(2);
 }
 function buildingView(el, id) {
   const b = Bd(id);
@@ -890,12 +908,12 @@ function calendarView(el) {
    <div class="acts one"><button class="act" id="kad"><b>Your Kaderakte <em>${S.xp} XP</em></b><span>Rank, skills, reputation and the favours you promised.</span></button></div>
    <div class="kicker">By rank</div><ul class="traits">${RANKS.map((x, i) => `<li class="${i === S.rank ? "" : "muted"}">${x.id} (${x.xp} XP): ${x.mk} manpower, ${x.ims} IMs, ${x.bugs} bugging sets</li>`).join("")}</ul>
    <div class="kicker">Rival</div><p class="who">${S.flags.fuchsMet ? `Oberleutnant Fuchs: ${S.fuchs >= 50 ? "openly hostile" : S.fuchs >= 25 ? "on his guard" : "polite"}.` : "None yet."}</p>`;
-  el.querySelector("#kad").onclick = () => sheet(kaderView);
+  el.querySelector("#kad").onclick = () => openKader();
 }
 
 function phoneTap() {
   const q = S.queue.find(q => ev(q).via === "telefoon");
-  if (q) return openEvent(q);
+  if (q) { stopRing(); return world.act("phoneUp", () => openEvent(q)); }
   const lines = [["Kessler", "‘I hope you will have something to report at the annual assessment.’"], ["Switchboard", "‘Wrong number.’ Click. Still, a moment of static on the line."], ["Katrin", "‘Will you be home on time today? Jens has a football match.’"]];
   const [w, t] = rand(lines); toast(`<b>${w}:</b> ${t}`);
 }
@@ -947,7 +965,7 @@ function showTitle() {
   $("#dly").onclick = () => { unlockAudio(); openDaily({ modal, closeModal, toast, sfx, esc, twLabel: t => TRAITS[t].l }, () => { if (dailyResult(todayKey()) && dailyResult(todayKey()).ok) medal("daily"); showTitle(); }); };
   $("#arc").onclick = archiveView;
   $("#hbk").onclick = () => handbook("regels");
-  const c = $("#cont"); if (c) c.onclick = () => { unlockAudio(); S = sv; $("#title").classList.remove("open"); if (S.tut === undefined) S.tut = 99; setMode("office"); refresh(); toast(`<b>${esc(turn().label)}</b> · ${S.mk} manpower`); };
+  const c = $("#cont"); if (c) c.onclick = () => { unlockAudio(); S = sv; $("#title").classList.remove("open"); if (S.tut === undefined) S.tut = 99; if (!S.service) { S.service = []; svc("start", "Assigned to the Kreisdienststelle Prenzlauer Berg."); } setMode("office"); refresh(); toast(`<b>${esc(turn().label)}</b> · ${S.mk} manpower`); };
 }
 
 
@@ -1029,7 +1047,7 @@ function doErrand(p) {
   const er = S.errands.find(x => x.pid === p.id); if (!er) return; const E = ERRANDS[er.k];
   if (E.need) { if (!S.inv[E.need]) return toast(`You have no ${INV[E.need][0]}.`); invAdd(E.need, -1); } else if (!spend(E.mp)) return;
   S.errands = S.errands.filter(x => x !== er); p.owes = true; p.fear = Math.max(0, p.fear - 10); p.dis = Math.max(0, p.dis - 6); p.loyal = Math.min(100, (p.loyal || 0) + 10);
-  S.stats.errands = (S.stats.errands || 0) + 1; addLog(p, `You did them a favour: ${E.t.toLowerCase()}`); sfx.good();
+  S.stats.errands = (S.stats.errands || 0) + 1; svc("favour", `A favour for ${p.name}: ${E.t.toLowerCase()}.`); addLog(p, `You did them a favour: ${E.t.toLowerCase()}`); sfx.good();
   const t = rand(p.traits.filter(t => !conf(p, t) && TRAITS[t] && !TRAITS[t].tw)); if (t) { p.known[t] = { s: "zeker" }; p.pages += 2; discoverLinks(); }
   if (S.stats.errands >= 4) medal("helfer");
   after(`<h1>Favour: ${esc(E.t)}</h1><div class="result">${esc(E.done)}${t ? `\n\nGrateful, ${esc(p.fn)} tells you more than ${pron(p)} should.\n✓ ${esc(trLabel(t))}` : ""}\n\n${esc(p.fn)} owes you now. Recruiting ${obj(p)} will be easier.</div>`, { ...(E.e || {}), xp: XP.quest, bu: 5, ki: churchy(p) ? 4 : 0 });
@@ -1059,24 +1077,52 @@ function interrogate(p) {
     after(`<h1>Nothing</h1><div class="result">Three hours, two ashtrays. ${esc(p.fn)} walks out with the same story ${pron(p)} came in with, and a new reason to hate you.</div>`, { c: -3, bu: -2, ki: churchy(p) ? -2 : 0 });
   });
 }
-// ---------- Kaderakte: rang, vaardigheden, reputatie, gunsten ----------
-function kaderView(el) {
-  const r = rank(), nr = RANKS[S.rank + 1], pts = points();
-  const prog = nr ? Math.round((S.xp - r.xp) / (nr.xp - r.xp) * 100) : 100;
-  const dots = n => "●".repeat(n) + "○".repeat(SK_MAX - n);
-  el.innerHTML = `<div class="kicker">Kaderakte · your personnel file</div><h2>${esc(r.id)}</h2>
-    <div class="compl"><span>${nr ? `To ${esc(nr.id)}` : "Highest rank"}</span><div class="cbar"><i style="width:${Math.max(0, Math.min(100, prog))}%"></i></div><b>${S.xp} XP</b></div>
-    <p class="muted small">${nr ? `${nr.xp - S.xp} XP to go. ` : ""}XP from observations, reports, cases, complete files, recruits, favours and the annual assessment. Every ${XP_PER_POINT} XP: one skill point.</p>
-    <div class="kicker">Skills <small class="muted">· ${pts ? `<b class="red">${pts} point${pts > 1 ? "s" : ""} to spend</b>` : "no points to spend"}</small></div>
-    <div class="acts one">${Object.entries(SKILLS).map(([k, v]) => `<button class="act sk" data-sk="${k}" ${!pts || sk(k) >= SK_MAX ? "disabled" : ""}><b>${esc(v.t)} <em>${dots(sk(k))}</em></b><span>${esc(v.d)}${pts && sk(k) < SK_MAX ? " Tap: train (+1)." : ""}</span></button>`).join("")}</div>
-    <div class="kicker">Reputation</div>
+// ---------- Kaderakte (fase 3F): volwaardig overzichtsscherm met staat van dienst ----------
+const SVC_L = { start: "Posting", promo: "Promotion", im: "Recruitment", arrest: "Arrest", zers: "Zersetzung", case: "Case solved", wrong: "Case closed", review: "Assessment", medal: "Decoration", favour: "Favour" };
+let kaderTab = "overview";
+function openKader(tab) { if (!S) return; if (tab) kaderTab = tab; const k = $("#kader"); k.classList.add("open"); document.body.classList.add("kader-open"); renderKader(); sfx.paper(); updateCoach(); }
+function closeKader() { $("#kader").classList.remove("open"); document.body.classList.remove("kader-open"); updateCoach(); }
+function renderKader() {
+  const r = rank(), nr = RANKS[S.rank + 1], pts = points(), st = S.stats;
+  const prog = nr ? Math.max(0, Math.min(100, Math.round((S.xp - r.xp) / (nr.xp - r.xp) * 100))) : 100;
+  const dots = n => `<span class="kdots">${Array.from({ length: SK_MAX }, (_, i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</span>`;
+  const years = Math.max(0, TURNS[S.t].y - 1983);
+  const svcList = (S.service || []).slice().reverse();
+  const tile = (n, l) => `<div class="ktile"><b>${n}</b><small>${l}</small></div>`;
+  const tabs = [["overview", "Overview"], ["skills", `Skills${pts ? ` <em>${pts}</em>` : ""}`], ["record", "Service record"], ["kit", "Favours & kit"]];
+  let body = "";
+  if (kaderTab === "overview") body = `
+    <div class="ktiles">${tile(st.recruits, "IMs recruited")}${tile(imCount(), "IMs active")}${tile(st.arrests, "Arrests")}${tile(st.zersetzung, "Zersetzung")}${tile(st.solved, "Cases solved")}${tile(st.complete || 0, "Files complete")}${tile(st.observe, "Observations")}${tile(st.errands || 0, "Favours done")}${tile(S.resTotal, "Results total")}</div>
+    <h3>Reputation</h3>
     <div class="reps">${Object.entries(REP).map(([k, v]) => `<div class="rep"><small>${esc(v.t)}</small>${bar10(repV(k))}<span>${repWord(repV(k))}</span></div>`).join("")}</div>
-    <p class="muted small">${esc(REP.buurt.d)} ${esc(REP.kerk.d)}</p>
-    <div class="kicker">Favours you promised <small class="muted">· ${S.errands.length}/3</small></div>
-    ${S.errands.map(x => { const p = P(x.pid); return `<button class="row" data-pid="${p.id}"><span class="rn"><b>${esc(p.name)}</b><small>${esc(ERRANDS[x.k].t)}</small></span><span class="rp">${x.due - S.t + 1}<small> t. left</small></span></button>`; }).join("") || "<p class='muted small'>None. Talk to people in the street; sometimes they ask you for something.</p>"}
-    <div class="kicker">Equipment</div><p class="who">${pool()}/${bugCap()} bugging sets in use${S.inv.minox ? " · Minox camera" : ""}${S.inv.kas ? ` · ${S.inv.kas} cassette${S.inv.kas > 1 ? "s" : ""}` : ""}. More from the strongbox: Requisition.</p>`;
-  el.querySelectorAll("[data-sk]").forEach(b => b.onclick = () => { const k = b.dataset.sk; if (points() <= 0 || sk(k) >= SK_MAX) return; S.sk[k]++; S.spent++; sfx.stamp(); save(); refresh(); rerender(); toast(`<b>${esc(SKILLS[k].t)}</b> ${sk(k)}/${SK_MAX}`); });
-  bindRows(el);
+    <p class="kmuted">${esc(REP.buurt.d)} ${esc(REP.kerk.d)}</p>
+    <h3>Assessment by Major Kessler</h3>
+    <p class="kquote">${S.gunst >= 70 ? "‘Reliable, ideologically firm. Recommended for further responsibility.’" : S.gunst >= 40 ? "‘Performs adequately. Needs to show more initiative and vigilance.’" : "‘Lacks zeal. His attitude requires observation.’"}${S.dossier >= 40 ? " <span class='kred'>Handwritten in the margin: ‘Check his contacts.’</span>" : ""}</p>`;
+  else if (kaderTab === "skills") body = `
+    <p class="kmuted">Every ${XP_PER_POINT} XP gives one skill point. ${pts ? `<b class="kred">${pts} point${pts > 1 ? "s" : ""} to spend.</b> Tap a skill to train it.` : "No points to spend right now."}</p>
+    <div class="kskills">${Object.entries(SKILLS).map(([k, v]) => `<button class="kskill" data-sk="${k}" ${!pts || sk(k) >= SK_MAX ? "disabled" : ""}><span class="kst"><b>${esc(v.t)}</b>${dots(sk(k))}</span><span class="ksd">${esc(v.d)}</span>${pts && sk(k) < SK_MAX ? `<span class="kplus">+1</span>` : ""}</button>`).join("")}</div>`;
+  else if (kaderTab === "record") body = `
+    <p class="kmuted">Everything that went into your personnel file, newest first.</p>
+    <ol class="ksvc">${svcList.map(x => `<li class="k-${x.k}"><span class="kd">${esc((TURNS[x.t] || TURNS[0]).label)}</span><span class="kk">${esc(SVC_L[x.k] || x.k)}</span><span class="kt">${esc(x.txt)}</span></li>`).join("") || "<li><span class='kt'>Nothing yet.</span></li>"}</ol>`;
+  else body = `
+    <h3>Favours you promised <small>${S.errands.length}/3</small></h3>
+    ${S.errands.map(x => { const p = P(x.pid); return `<button class="row" data-pid="${p.id}"><span class="rn"><b>${esc(p.name)}</b><small>${esc(ERRANDS[x.k].t)}</small></span><span class="rp">${x.due - S.t + 1}<small> t. left</small></span></button>`; }).join("") || "<p class='kmuted'>None. Talk to people in the street; sometimes they ask you for something.</p>"}
+    <h3>Equipment</h3>
+    <div class="ktiles">${tile(`${pool()}/${bugCap()}`, "Bugging sets")}${tile(S.inv.kas || 0, "Cassettes")}${tile(S.inv.minox ? "Yes" : "No", "Minox camera")}${tile(S.inv.dm || 0, "Westgeld")}${tile(S.inv.kaffee || 0, "West coffee")}${tile(S.inv.buck || 0, "Bückware")}</div>
+    <p class="kmuted">More from the strongbox on your desk: Requisition.</p>`;
+  $("#kader").innerHTML = `<div class="kpaper">
+    <div class="khead"><div class="kstamp">VERTRAULICHE DIENSTSACHE</div><div class="kmin">Ministerium für Staatssicherheit · Kreisdienststelle Prenzlauer Berg</div><h1>Kaderakte</h1></div>
+    <div class="kid"><div class="kphoto"><div class="kface"></div><div class="kepau r${S.rank}"><i></i><i></i></div><small>Lichtbild</small></div>
+      <dl><dt>Name</dt><dd><span class="kblack">████████████</span></dd><dt>Rank</dt><dd><b>${esc(r.id)}</b></dd><dt>Unit</dt><dd>Abteilung XX · Kirche, Kultur, Untergrund</dd><dt>In service</dt><dd>since March 1983 · ${years ? `${years} year${years > 1 ? "s" : ""}` : "first year"}</dd><dt>Conscience</dt><dd>${bar10(S.geweten)}</dd></dl></div>
+    <div class="kxp"><span>${nr ? `To ${esc(nr.id)}` : "Highest rank"}</span><div class="cbar"><i style="width:${prog}%"></i></div><b>${S.xp} XP</b></div>
+    <div class="ktabs">${tabs.map(([k, l]) => `<button data-tab="${k}" class="${kaderTab === k ? "on" : ""}">${l}</button>`).join("")}</div>
+    <div class="kbody">${body}</div></div>
+    <div class="kfoot"><button id="kClose">Back to duty</button></div>`;
+  const K = $("#kader");
+  K.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { kaderTab = b.dataset.tab; sfx.paper(); renderKader(); });
+  K.querySelectorAll("[data-sk]").forEach(b => b.onclick = () => { const k = b.dataset.sk; if (points() <= 0 || sk(k) >= SK_MAX) return; S.sk[k]++; S.spent++; sfx.stamp(); save(); refresh(); renderKader(); toast(`<b>${esc(SKILLS[k].t)}</b> ${sk(k)}/${SK_MAX}`); });
+  K.querySelectorAll("[data-pid]").forEach(b => b.onclick = () => { closeKader(); sheet(e => personView(e, P(b.dataset.pid))); });
+  $("#kClose").onclick = closeKader;
 }
 
 // ---------- binnenruimtes ----------
@@ -1359,7 +1405,7 @@ function nextStep() {
   if (IX && IX.kind === "flat" && S.homeBugs && S.homeBugs.found.length < S.homeBugs.spots.length) return { text: "Tap the objects in your flat to search them for bugs." };
   const lowIM = S.people.find(p => p.status === "im" && S.t - (p.lastTreff ?? S.t) > 2 && !S.used["t" + p.id]);
   if (lowIM && S.t % 2 === 0 && !(IX && IX.kind === "kw")) return { text: `IM <b>„${esc(lowIM.code)}“</b> has not seen you for a while. Loyalty is dropping. Tap for a Treff.`, go: () => treffView(lowIM) };
-  if (points() > 0 && !$("#sheet").classList.contains("open")) return { text: `<b>${points()} skill point${points() > 1 ? "s" : ""}</b> to spend. Tap to open your Kaderakte.`, go: () => sheet(kaderView), target: "#rkBtn" };
+  if (points() > 0 && !$("#sheet").classList.contains("open")) return { text: `<b>${points()} skill point${points() > 1 ? "s" : ""}</b> to spend. Tap to open your Kaderakte.`, go: () => openKader(), target: "#rkBtn" };
   if (S.case && S.mk > 0) return { text: `<b>Case:</b> find the culprit (${S.case.turns} turn${S.case.turns > 1 ? "s" : ""} left). Tap for the suspects.`, go: () => sheet(caseView) };
   if (S.mk > 0) {
     const lev = S.people.find(p => p.status === "vrij" && !p.family && !p.secretIM && Object.keys(p.known).some(t => TRAITS[t] && TRAITS[t].lev && p.known[t].s === "zeker"));
@@ -1441,9 +1487,9 @@ async function boot() {
       if (!S || S.over) return;
       if (k === "wijk") return setMode("district");
       if (k === "telefoon") return phoneTap();
-      if (k === "dossiers") return sheet(inboxView);
+      if (k === "dossiers") return world.act("openFile", () => sheet(inboxView));
       if (k === "onderzoek") return sheet(caseView);
-      if (k === "kartotheek") return sheet(e => cartotheek(e));
+      if (k === "kartotheek") return world.act("drawer", () => sheet(e => cartotheek(e)));
       if (k === "gezin") return sheet(familyView);
       if (k === "kalender") return sheet(calendarView);
       if (k === "typemachine") return confirmEnd();
@@ -1456,6 +1502,7 @@ async function boot() {
     onBuilding: id => { if (S && !S.over) openBuilding(id); },
     onInterior: k => onInterior(k),
     onWalker: i => { if (S && !S.over) walkerCard(i); },
+    canIdle: () => !!S && !S.over && !$("#modal").classList.contains("open") && !$("#sheet").classList.contains("open") && !$("#title").classList.contains("open") && !$("#kader")?.classList.contains("open"),
   }, models);
   $("#sheetClose").onclick = closeSheet; $("#sheetBack").onclick = back;
   $("#modal").onclick = e => { if (e.target.id === "modal" && !$("#modal").dataset.lock) closeModal(); };
@@ -1473,6 +1520,6 @@ function confirmEnd() {
   if (S.queue.length) { toast("Deal with the waiting matters first."); return openEvent(S.queue[0]); }
   modal(`<h1>End the turn?</h1><div class="result">${S.mk ? `You still have <b>${S.mk} manpower</b> left. It will be lost.\n\nThe next turn is <b>${esc((TURNS[S.t + 1] || turn()).label)}</b>.` : "All manpower has been used."}${S.case ? `\n\nThe case runs for ${S.case.turns} more turn(s).${S.case.turns === 1 ? " After that it is too late." : ""}` : ""}${turn().review ? "\n\nThe annual assessment follows." : ""}</div>
    <div class="choices"><button class="ch" id="y"><b>Type the report and end the turn</b></button><button class="ch" id="n"><b>Not yet</b></button></div>`,
-    m => { m.querySelector("#y").onclick = () => { closeModal(); closeSheet(); endTurn(); }; m.querySelector("#n").onclick = closeModal; });
+    m => { m.querySelector("#y").onclick = () => { closeModal(); closeSheet(); if (S.queue.length) return endTurn(); world.act("type", endTurn); }; m.querySelector("#n").onclick = closeModal; });
 }
 boot();

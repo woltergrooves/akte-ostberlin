@@ -122,29 +122,42 @@ De belangrijkste blokjes zijn vervangen door echte low-poly modellen. Lukt het l
 **Publicatie**
 - [x] Vercel-project `akte-ostberlin`, gekoppeld aan GitHub: elke push naar `main` gaat live op de hoofdlink (geen previews)
 
-## Fase 4: Animaties
+## Fase 3F: Kaderakte (18 nov)
 
-**Eerste-persoonshanden in het kantoor** (rigged handen, bijv. via itch.io of Blender Rigify)
-- [ ] Hoorn van de telefoon oppakken en tegen het oor houden als hij gaat
-- [ ] Dossier van de stapel pakken en openslaan
-- [ ] Stempel op een dossier zetten bij een beslissing ("GENEHMIGT", "ABGELEHNT")
-- [ ] Typen op de typemachine bij Afsluiten, met een papier dat eruit wordt getrokken
-- [ ] Kartotheeklade opentrekken en kaartjes doorbladeren
-- [ ] Sigaret aansteken, koffie drinken (idle-animaties als je even niets doet)
+- [x] Kaderakte als volledig scherm (tik op je rang): personalia met pasfoto en schouderstukken, XP-balk, tabbladen Overzicht · Vaardigheden · Staat van dienst · Gunsten & uitrusting, grote knop onderaan „Back to duty“
+- [x] Staat van dienst: plaatsing, bevorderingen, IM's, arrestaties, Zersetzung, zaken, jaarbeoordelingen, onderscheidingen en gunsten per beurt (`S.service`)
+- [x] Beoordeling door Kessler in de akte, reputatiebalken hersteld
+
+## Fase 4: Animaties (18 nov)
+
+**Eerste-persoonshanden in het kantoor** (eigen low-poly handen als starre delen, `js/hands.js`)
+- [x] Hoorn van de telefoon oppakken en tegen het oor houden als hij gaat (en neerleggen als het gesprek klaar is)
+- [x] Dossier van de stapel pakken en openslaan
+- [x] Stempel op een dossier zetten bij een beslissing ("GENEHMIGT", "ABGELEHNT")
+- [x] Typen op de typemachine bij Afsluiten, met een papier dat eruit wordt getrokken
+- [x] Kartotheeklade schuift open
+- [x] Sigaret roken, koffie drinken (idle-animaties na ±16 s niets doen)
 
 **Camera**
-- [ ] Rondkijken in het kantoor (naar het raam, de deur, de kast)
-- [ ] Overgang kantoor → wijk: camera vliegt door het raam naar buiten
-- [ ] Inzoomen op een gebouw als je erop tikt
+- [x] Rondkijken in het kantoor (slepen; veert terug)
+- [x] Overgang kantoor → wijk: camera vliegt door het raam naar buiten
+- [x] Inzoomen op een gebouw als je erop tikt
 
 **Wijk**
-- [ ] Voetgangers met loop-, sta- en praatanimaties (Quaternius of Mixamo)
+- [x] Voetgangers met loop-, sta- en praatanimaties (eigen keyframe-clips op het Quaternius-skelet, `js/anim.js`), blijven soms even staan, draaien zich naar je toe als je ze aanspreekt
+- [x] Rij voor de Kaufhalle staat, Subbotnik veegt, menigte juicht en rent
 - [ ] Deuren en ramen die opengaan, lichten die 's avonds aangaan
-- [ ] Korte filmpjes: Wartburg die om 5 uur 's ochtends voorrijdt bij een arrestatie, de Muur die opengaat op 9 november
+- [x] Korte filmpjes: Wartburg die om 5 uur 's ochtends voorrijdt bij een arrestatie, de Muur die opengaat op 9 november
+
+**Wijkscherm opgeknapt**
+- [x] Geen witte leegte meer: stad rondom tot in de mist (samengevoegde blokken, straatraster op de grond), West-Berlijn achter de Muur
+- [x] Nieuwe grens: Hinterlandmauer, signaalhek, lichttrasse, Kolonnenweg, Kfz-graben, Tschechenigel, wachttorens BT-11, Grenzmauer 75 met buisrand en graffiti aan de westkant (`js/border.js`)
+- [x] Auto's en voetgangers gaan niet meer door de Muur: straten lopen dood op de Hinterlandmauer, auto's keren in een boog, voetgangers keren om
+- [x] Camera kan niet meer de leegte in schuiven
 
 **Techniek**
-- [ ] three.js `AnimationMixer` met overgangen tussen clips
-- [ ] Eén `.glb` per personage met meerdere animaties
+- [x] three.js `AnimationMixer` met overgangen tussen clips
+- [ ] Eén `.glb` per personage met meerdere animaties (nu: clips in code; Quaternius UAL niet gebruikt)
 
 ## Fase 5: De wijk leeft
 

@@ -37,28 +37,28 @@ Lees dit bestand eerst. Het wordt na elke fase bijgewerkt.
 6. Antwoord kort en in het Nederlands. Eindig met de korte prompt voor de volgende chat.
 
 ## Status
-- Klaar: fase 1, 1b, 2, 3 A+B, 3 C+D plus alle ideeën (17 nov) en **3E RPG** (18 nov). Speelbaar op https://akte-ostberlin.vercel.app (alleen deze link).
+- Klaar: fase 1, 1b, 2, 3 A+B, 3 C+D plus alle ideeën (17 nov) **3E RPG**, **3F Kaderakte** en **4 Animaties + nieuw wijkscherm** (18 nov). Speelbaar op https://akte-ostberlin.vercel.app (alleen deze link).
 - Save-key nu `akte-save-v6` (nieuwe velden: `xp`, `spent`, `sk`, `rep {buurt, kerk}`, `errands`, `promo`; per persoon `owes`, `held`). Oude saves worden genegeerd.
 - Modules: `js/audio.js`, `js/interiors.js`, `js/minigames.js` (letter/tape/darkroom/**verhoor**), `js/daily.js`, `js/meta.js` (nu ook medaille `helfer`), `js/lexicon.js`, **`js/rpg.js`** (SKILLS, XP-tabel, REP, ERRANDS, `buildStory` voor het verhoor).
 - Fase 3E in `game.js`:
   - XP via `gainXP(n)` of `e.xp` in `applyE` (chip "XP +n"). Rang hangt af van `RANKS[i].xp` (0/80/220/420/650; vijfde rang Oberstleutnant). Bevordering zet `S.promo`; `showPromo()` verschijnt na `after()`, na een gebeurtenis, na de jaarbeoordeling of bij de briefing. Jaarbeoordeling geeft nu +25 XP en geen automatische bevordering meer.
   - Vaardigheden `S.sk` (obs, verh, ueb, tech, geh; max 5), één punt per 40 XP (`points()`). Effecten: observeren, roddel, waarschuwen, werfkans, ontdekkingskans microfoons, postcontrole, verdenking (`applyE` schaalt `d`), telefooncel, Fuchs. Tech 3 = +1 afluisterset (`bugCap()`).
-  - Kaderakte: `kaderView` (tik op de rang in de HUD; rode +N bij punten). Ook via Jaardoelen.
+  - Kaderakte: zie fase 3F hieronder.
   - Straat: `walkerCard` → `talkMenu` met keuzes en kansen (`talkChance`): small talk, vragen naar buren (Overtuigen), papieren vragen (Verhoor), koffie, omkopen met DM. Soms vraagt iemand een gunst.
   - Gunsten: `S.errands` (max 3, 3 beurten), uitvoeren in het dossier (`doErrand`): persoon `owes` (+15% werven), buurt +5. Verlopen: buurt −4.
   - Verhoor: knop "Interrogate" (2 MP, dossier ≥ 10 p.) → `interrogate(p)` → minigame `verhoor`. Cassette = extra leven (wordt verbruikt als je hem nodig had). Bekentenis van de dader markeert de zaak.
   - Treff: extra keuzes Probe (Verhoor), Win over (Overtuigen), Record (cassette → `im.held`: trager loyaliteitsverlies, nooit dubbelagent).
   - Geldkistje: Requisitie bij Abteilung 26 (1× per beurt, kost gunst): cassette, afluisterset (Techniek ≥ 1, max 3), Minox (vanaf Oberleutnant; observeren geeft minstens 2 dingen).
   - Reputatie: MfS = Favour, gezin = Family, nieuw `S.rep.buurt` en `S.rep.kerk` (zakken bij arrestaties, Zersetzung, waarschuwingen; stijgen met gunsten; trekken elke beurt 1 punt terug naar 45/40). Effect op gesprekskansen, roddel, werven van kerkmensen, epiloog.
-- Test 18 nov: drie volledige rondes 1983 → einde (mobiel 390×844 en desktop) met alle nieuwe schermen, geen consolefouten (alleen de geblokkeerde Google-fonts in de testomgeving). Testscript lag in `/tmp/akt`.
+- Fase 3F: Kaderakte is een eigen schermlaag `#kader` (niet de sheet): `openKader(tab)`, `renderKader()`, `closeKader()`. Tabs overview/skills/record/kit, knop „Back to duty“. Staat van dienst in `S.service` via `svc(k, txt)` (start, promo, im, arrest, zers, case, wrong, review, medal, favour). Oude saves krijgen een lege lijst (save-key ongewijzigd).
+- Fase 4:
+  - `js/anim.js`: clips met keyframes op het Quaternius-skelet (walk, run, idle, talk, cheer, sweep), `animate(root, kind)` → mixer met `play(name, fade, timeScale)`. Gekalibreerde assen: been L voor +Z / R voor −Z; arm L voor −Z / R voor +Z; knie +X; elleboog L −Z / R +Z; romp voorover Abdomen +X; draaien = Y. Figuren kijken bij rotatie 0 naar +Z.
+  - `js/hands.js`: eigen low-poly handen, IK-armen vanaf een „schouder“ net onder de beeldrand. `phoneUp/phoneDown`, `openFile`, `stamp(word)`, `type`, `idle(coffee|smoke)`. Camera leunt half naar het voorwerp (`leanAt`). Via `world.act(name, ...args, cb)`; buiten het kantoor meteen de callback. Tik = versnellen.
+  - `world.js`: rondkijken door te slepen in het kantoor; vlucht door het raam bij kantoor → wijk (`fly`, post-shader `fade`); `focus(id)` zoomt vloeiend in; `look(x, z, zoom)`; filmpjes `cinematic("zugriff"|"mauer", {bid, caption}, cb)` met zwarte balken (`#film`, tik = sneller), nachtfilter (`night`-uniform).
+  - `game.js`: telefoon → `phoneUp` (ophangen in `closeModal`), Files → `openFile`, Card index → lade, dossier-beslissing in het kantoor → stempel, Afsluiten → typen. Arrestatie zet `S.flags._arrestBld`; bij `advance()` eerst het Zugriff-filmpje. Event `muur` → Mauer-filmpje vóór het einde (`S.flags._mauerFilm`).
+  - `js/border.js`: stad rondom (samengevoegde meshes), straatraster als grondtextuur, grens (Hinterlandmauer z≈18,8, hek, lichttrasse, Kolonnenweg, zand, Tschechenigel, BT-11, Grenzmauer 75 z≈28 met graffiti west), West-Berlijn vanaf z≈37. Opening ±4,3 m = `SUR.gapSegs`.
+  - Lopers keren aan het eind van hun straat (verticaal z −26…16,6), auto's keren in een boog (z tot 15,4), camera-doel begrensd.
+- Test 18 nov: volledige ronde met bot (mobiel 390×844) incl. Zugriff- en Mauer-filmpje en alle handanimaties, geen consolefouten. Testscripts in `/tmp/akt` (`sync.sh`, `play.mjs`, `office.mjs`, `posetest.html` voor poses).
 
-## Volgende fase: FASE 4 (animaties)
-Zie hieronder. Kleine RPG-wensen voor later: balans van XP (een speler haalt ±500–800 XP), meer soorten gunsten, gesprekskeuzes ook in de Kneipe en de Kaufhalle.
-
-## Fase 4: animaties
-- Eerste-persoonshanden in het kantoor: hoorn oppakken als de telefoon gaat (node `Handset`), dossier pakken en openslaan, stempelen bij een beslissing ("GENEHMIGT"/"ABGELEHNT", node `Stamp`), typen bij Afsluiten met papier dat eruit wordt getrokken (`Carriage`, `Paper`). Handen eventueel zelf bouwen als low-poly rigid parts.
-- Camera: rondkijken in het kantoor, vlucht door het raam naar de wijk, inzoomen op een getikt gebouw.
-- Wijk: echte loop-, sta- en praatanimaties voor de figuren. Probeer eerst de Quaternius *Universal Animation Library* (CC0) via GitHub-mirrors. Lukt dat niet, maak dan clips met keyframes op de botten (`AnimationClip` met `QuaternionKeyframeTrack`) en vervang daarmee `posePerson()`.
-- `AnimationMixer` met overgangen; één `.glb` per figuur met meerdere clips.
-- Korte filmpjes: Wartburg die om 5 uur voorrijdt bij een arrestatie; de Muur die opengaat op 9 november.
-- PS2-look, gameplay en mobiele werking blijven zoals ze zijn. Let op prestaties: 32 lopers + 90 figuren in de finale.
+## Volgende fase: FASE 5 (de wijk leeft)
+Zie `ROADMAP.md`. Nog open uit fase 4: ramen/deuren die opengaan en lichten 's avonds (past goed bij dag/nacht in fase 5), eventueel echte `.glb`-clips. Kleine RPG-wensen: balans van XP, meer soorten gunsten, gesprekskeuzes in de Kneipe en de Kaufhalle.

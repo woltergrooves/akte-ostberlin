@@ -4,6 +4,10 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { BUILDINGS, SLOGANS } from "./data.js";
 import { instance } from "./assets.js";
 import { buildInterior, radioModel } from "./interiors.js";
+import { buildSurroundings } from "./border.js";
+import { animate } from "./anim.js";
+import { createHands } from "./hands.js";
+import { sfx } from "./audio.js";
 
 const SHORT = { kollwitz: "Kollwitz 12", lychener: "Lychener 40", greif: "Greifswalder", dimi: "Dimitroff", kerk: "Zionskirche", fabriek: "Bergmann-Borsig", school: "EOS school", kliniek: "Poliklinik", cafe: "Café Mosaik", konsum: "Kaufhalle", mfs: "MfS" };
 const CELL = 6.5;
@@ -78,9 +82,9 @@ export function createWorld(container, H, M = {}) {
   const rt = new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, type: THREE.HalfFloatType });
   const postScene = new THREE.Scene(); const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   const postMat = new THREE.ShaderMaterial({
-    uniforms: { tDiffuse: { value: rt.texture }, exposure: { value: 1.1 } },
+    uniforms: { tDiffuse: { value: rt.texture }, exposure: { value: 1.1 }, fade: { value: 0 }, fadeCol: { value: new THREE.Color(0xd9d3c3) }, night: { value: 0 } },
     vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }",
-    fragmentShader: `uniform sampler2D tDiffuse; uniform float exposure; varying vec2 vUv;
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float exposure; uniform float fade; uniform vec3 fadeCol; uniform float night; varying vec2 vUv;
       float bayer(vec2 p){ p = mod(floor(p), 4.0); float a = mod(p.x,2.0), b = mod(p.y,2.0), c = floor(p.x/2.0), d = floor(p.y/2.0);
         return (4.0*(a*2.0+b*3.0-4.0*a*b) + (c*2.0+d*3.0-4.0*c*d)) / 16.0; }
       void main(){
@@ -90,6 +94,8 @@ export function createWorld(container, H, M = {}) {
         float l = dot(c, vec3(0.299,0.587,0.114)); c = mix(vec3(l), c, 1.12); c = (c - 0.5) * 1.06 + 0.5;
         c = floor(c * 31.0 + bayer(gl_FragCoord.xy)) / 31.0;
         vec2 q = vUv - 0.5; c *= 1.0 - dot(q, q) * 0.55;
+        c = mix(c, c * vec3(0.6, 0.68, 0.95) * (0.85 + 0.5 * smoothstep(0.5, 0.95, max(c.r, max(c.g, c.b)))), night);
+        c = mix(c, fadeCol, fade);
         gl_FragColor = vec4(c, 1.0);
       }`,
     depthTest: false, depthWrite: false,
@@ -313,7 +319,10 @@ export function createWorld(container, H, M = {}) {
   const cab = new THREE.Group();
   const cabMat = mat(0x5f6a5e, { metalness: 0.4, roughness: 0.5 });
   cab.add(box(0.62, 1.3, 0.55, cabMat, 0, 0.65, 0));
-  for (let i = 0; i < 4; i++) { cab.add(box(0.56, 0.28, 0.02, mat(0x6d786b, { metalness: 0.4, roughness: 0.45 }), 0, 0.2 + i * 0.31, 0.28)); cab.add(box(0.14, 0.03, 0.03, brass, 0, 0.27 + i * 0.31, 0.3)); cab.add(box(0.1, 0.05, 0.005, mat(0xefe7d2), 0, 0.22 + i * 0.31, 0.292)); }
+  const drawer = new THREE.Group(); cab.add(drawer);
+  for (let i = 0; i < 4; i++) { const tgt = i === 3 ? drawer : cab; tgt.add(box(0.56, 0.28, 0.02, mat(0x6d786b, { metalness: 0.4, roughness: 0.45 }), 0, 0.2 + i * 0.31, 0.28)); tgt.add(box(0.14, 0.03, 0.03, brass, 0, 0.27 + i * 0.31, 0.3)); tgt.add(box(0.1, 0.05, 0.005, mat(0xefe7d2), 0, 0.22 + i * 0.31, 0.292)); }
+  drawer.add(box(0.54, 0.24, 0.5, mat(0x56604f), 0, 1.13, 0.02)); for (let k = 0; k < 9; k++) drawer.add(box(0.48, 0.16, 0.004, mat(k % 3 ? 0xe9e2cc : 0xd9cfa9), 0, 1.2, -0.18 + k * 0.045));
+  let drawerOpen = 0, drawerT = 0;
   cab.position.set(1.3, 0, -1.25); cab.rotation.y = -0.35; O.add(cab);
   tappable(cab, "kartotheek", "Card index", new THREE.Vector3(1.3, 1.62, -1.25));
   // radio (RFT) op de kast: aan/uit, nieuws van de beurt
@@ -348,6 +357,15 @@ export function createWorld(container, H, M = {}) {
   pinG.position.set(-1.15, 1.62, -1.58); pinG.scale.setScalar(1.25); O.add(pinG);
   tappable(pinG, "prikbord", "Pinboard", new THREE.Vector3(-1.05, 2.0, -1.5));
 
+  // eerste-persoonshanden (fase 4)
+  const hands = createHands(O, oCam, {
+    handset, folders, desk: DESK_Y, tw,
+    stamp: (stampM && stampM.getObjectByName("Stamp")) || stamp, pad: stampM && stampM.getObjectByName("Pad"),
+    carriage: twM && twM.getObjectByName("Carriage"), paperNode: twM && twM.getObjectByName("Paper"),
+    cup: cupM || null, ash: new THREE.Vector3(0.32, DESK_Y, 0.28),
+  }, { click: () => sfx.click(), paper: () => sfx.paper(), stamp: () => sfx.stamp(), key: () => sfx.type(1), ding: () => sfx.bell() });
+  const oBase = new THREE.Vector3(); const look = { yaw: 0, pitch: 0, hold: 0 }; let idleT = 0;
+
   // deur
   const door = new THREE.Group(); door.add(box(0.95, 2.1, 0.05, mat(0x6b5236, { roughness: 0.5 }), 0, 1.05, 0)); door.add(cyl(0.03, 0.03, 0.08, brass, 0.38, 1.05, 0.05)); door.children[1].rotation.x = Math.PI / 2;
   door.position.set(-2.33, 0, -0.6); door.rotation.y = Math.PI / 2; O.add(door);
@@ -361,7 +379,7 @@ export function createWorld(container, H, M = {}) {
   const controls = new OrbitControls(dCam, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.12;
   controls.minPolarAngle = 0.55; controls.maxPolarAngle = 1.1;
-  controls.minZoom = 0.55; controls.maxZoom = 3.2; controls.screenSpacePanning = false;
+  controls.minZoom = 0.7; controls.maxZoom = 3.2; controls.screenSpacePanning = false;
   controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
   controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
   controls.enabled = false; controls.target.set(3, 0, -4); dCam.position.set(58, 60, 51); dCam.lookAt(controls.target);
@@ -371,8 +389,6 @@ export function createWorld(container, H, M = {}) {
   D.add(sun);
 
   // ---------- ondergrond: kinderkopjes, Berliner Gehweg ----------
-  const groundMat = mat(0x5f5a4c);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), groundMat); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; D.add(ground);
   const cobble = canvasTex(64, 64, (g, w, h) => { g.fillStyle = "#4a4945"; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 8) for (let x = (y / 8) % 2 * 4; x < w; x += 8) { const v = 70 + Math.floor(Math.random() * 30); g.fillStyle = `rgb(${v},${v - 2},${v - 6})`; g.fillRect(x + 1, y + 1, 6, 6); } }, 1);
   cobble.wrapS = cobble.wrapT = THREE.RepeatWrapping;
   const walkTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = "#8b877b"; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 4) for (let x = 0; x < w; x += 4) { const v = 120 + Math.floor(Math.random() * 25); g.fillStyle = `rgb(${v},${v - 3},${v - 10})`; g.fillRect(x, y, 3, 3); } g.fillStyle = "#a8a397"; for (let y = 0; y < h; y += 16) { g.fillRect(22, y + 1, 20, 14); } g.strokeStyle = "#6f6b60"; for (let y = 0; y < h; y += 16) g.strokeRect(22.5, y + 1.5, 19, 13); }, 1);
@@ -449,6 +465,10 @@ export function createWorld(container, H, M = {}) {
     for (let f = 1; f < floors; f++) if ((seed + f) % 3 === 0) g.add(box(0.9, 0.1, 0.45, mat(0x5a5650), wdt * 0.15, f * 1.15 + 0.15, dep / 2 + 0.22));
     return H;
   }
+
+  // stad rondom, de grens en het Westen (border.js)
+  const SUR = buildSurroundings(D, { canvasTex, mat, lam, CELL, facadeOld, facadeWBS });
+  const groundMat = SUR.groundMat;
 
   // DDR-vlag
   const flags = [];
@@ -589,10 +609,10 @@ export function createWorld(container, H, M = {}) {
 
   // tram (Tatra) op de Dimitroffstraße-as
   const TRAM_Z = -1.5 * CELL;
-  winterMats.push(strip(70, 0.06, mat(0x2a2a2a), 0, TRAM_Z - 0.32, true, 0.03)); winterMats.push(strip(70, 0.06, mat(0x2a2a2a), 0, TRAM_Z + 0.32, true, 0.03));
+  winterMats.push(strip(130, 0.06, mat(0x2a2a2a), 0, TRAM_Z - 0.32, true, 0.03)); winterMats.push(strip(130, 0.06, mat(0x2a2a2a), 0, TRAM_Z + 0.32, true, 0.03));
   const WIRE_Y = 2.36; // rijdraad op de hoogte van de stroomafnemer
-  for (let x = -34; x <= 34; x += 6.5) { D.add(cyl(0.05, 0.05, WIRE_Y + 0.25, poleMat, x + 3.25, (WIRE_Y + 0.25) / 2, TRAM_Z + 1.25, 6)); D.add(box(0.05, 0.05, 1.3, poleMat, x + 3.25, WIRE_Y + 0.15, TRAM_Z + 0.62)); }
-  D.add(box(70, 0.02, 0.02, mat(0x222222), 0, WIRE_Y, TRAM_Z));
+  for (let x = -63; x <= 60; x += 6.5) { D.add(cyl(0.05, 0.05, WIRE_Y + 0.25, poleMat, x + 3.25, (WIRE_Y + 0.25) / 2, TRAM_Z + 1.25, 6)); D.add(box(0.05, 0.05, 1.3, poleMat, x + 3.25, WIRE_Y + 0.15, TRAM_Z + 0.62)); }
+  D.add(box(130, 0.02, 0.02, mat(0x222222), 0, WIRE_Y, TRAM_Z));
   const tram = new THREE.Group();
   const tramTex = canvasTex(128, 32, (g, w, h) => { g.fillStyle = "#e8d8a0"; g.fillRect(0, 0, w, h); g.fillStyle = "#d26a1e"; g.fillRect(0, h * 0.62, w, h * 0.38); g.fillStyle = "#2b3238"; for (let x = 4; x < w - 6; x += 15) g.fillRect(x, 5, 11, 11); }, 1);
   const tm = lam({ map: tramTex });
@@ -610,21 +630,9 @@ export function createWorld(container, H, M = {}) {
   const leaves = [];
   treeSpots.forEach(([x, z], k) => { if (k % 3 !== 0) return; const t = new THREE.Group(); t.add(cyl(0.12, 0.16, 1.6, trunkMat, 0, 0.8, 0, 6)); const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.95, 0), treeMat); l.position.y = 2.1; l.castShadow = true; t.add(l); leaves.push(l); t.position.set(x, 0, z); t.scale.setScalar(0.8 + ((k * 37) % 10) / 20); treeG.add(t); });
 
-  // de Muur
-  const WALL_Z = 3.4 * CELL;
-  const wallG = new THREE.Group(); D.add(wallG);
-  const wallMatD = mat(0xd6d3c9);
-  const wallSegs = [];
-  for (let x = -40; x <= 40; x += 1.3) { const seg = new THREE.Group(); seg.add(box(1.25, 3.6, 0.3, wallMatD, 0, 1.8, 0)); const tube = cyl(0.25, 0.25, 1.28, mat(0xe0ddd2), 0, 3.7, 0, 10); tube.rotation.z = Math.PI / 2; seg.add(tube); seg.position.set(x, 0, WALL_Z + 6); wallG.add(seg); wallSegs.push(seg); }
-  for (let x = -40; x <= 40; x += 2) wallG.add(box(0.08, 2.4, 0.08, mat(0x777777), x, 1.2, WALL_Z));
-  wallG.add(box(80, 0.05, 0.05, mat(0x777777), 0, 2.3, WALL_Z)); wallG.add(box(80, 0.05, 0.05, mat(0x777777), 0, 1.4, WALL_Z));
-  const dstrip = new THREE.Mesh(new THREE.PlaneGeometry(80, 5.6), mat(0xc9b993, { roughness: 1 })); dstrip.rotation.x = -Math.PI / 2; dstrip.position.set(0, 0.015, WALL_Z + 3); dstrip.receiveShadow = true; wallG.add(dstrip);
-  for (let x = -36; x <= 36; x += 9) { wallG.add(cyl(0.07, 0.07, 4.5, mat(0x555555), x, 2.25, WALL_Z + 1.5, 6)); wallG.add(box(0.6, 0.15, 0.25, lam({ color: 0xfff0c0, emissive: 0x666040 }), x, 4.5, WALL_Z + 1.5)); }
-  const tower = new THREE.Group(); tower.add(cyl(0.7, 0.7, 6, mat(0xbfbcb2), 0, 3, 0, 12)); tower.add(cyl(1.3, 1.3, 1.5, mat(0xbfbcb2), 0, 6.6, 0, 12)); tower.add(cyl(1.32, 1.32, 0.5, lam({ color: 0x334455, roughness: 0.2 }), 0, 6.8, 0, 12)); tower.add(box(0.4, 0.4, 0.6, mat(0x222222), 0, 7.6, 0));
-  tower.position.set(9, 0, WALL_Z + 3.5); wallG.add(tower);
-  // Westen
-  const westCols = [0xe7d8b0, 0xc9d6df, 0xe4c4b0, 0xd0d9c0, 0xf0e4cc];
-  for (let i = 0; i < 9; i++) { const h = 2.2 + (i * 7) % 3; const wb = box(5, h, 4, mat(westCols[i % 5]), -36 + i * 9, h / 2, WALL_Z + 16); D.add(wb); const neon = box(3, 0.6, 0.08, lam({ color: [0xff4f8a, 0x4fd7ff, 0xffd54f, 0x7dff6a][i % 4], emissive: [0xff2f6a, 0x2fb7ff, 0xffb52f, 0x5ddf4a][i % 4], emissiveIntensity: 1.2 }), -36 + i * 9, h + 0.4, WALL_Z + 13.95, false); D.add(neon); }
+  // de Muur: zie border.js
+  const WALL_Z = SUR.WALL_Z;
+  const wallSegs = SUR.gapSegs;
 
   // tv-toren in de verte
   const tv = new THREE.Group(); const silver = mat(0xb8bcc0, { metalness: 0.6, roughness: 0.3 });
@@ -644,7 +652,8 @@ export function createWorld(container, H, M = {}) {
     }
     const horiz = i % 2 === 0;
     const lane = horiz ? ((i % 6) / 2 - 1 + 0.5) * CELL : ((i % 8) - 4 + 0.5) * CELL;
-    c.userData = { horiz, lane: lane + (i % 4 < 2 ? 0.45 : -0.45), dir: i % 4 < 2 ? 1 : -1, pos: (i * 13) % 60 - 30, speed: 3 + (i % 3) };
+    // rechts rijden; aan het eind van de straat (Hinterlandmauer of ver in de mist) keren ze in een boog
+    c.userData = { horiz, lane, dir: i % 4 < 2 ? 1 : -1, pos: horiz ? (i * 13) % 80 - 40 : (i * 11) % 60 - 40, min: -60, max: horiz ? 60 : 15.4, speed: 3 + (i % 3), turn: -1 };
     D.add(c); cars.push(c);
   }
 
@@ -661,11 +670,12 @@ export function createWorld(container, H, M = {}) {
     const rig = ["UpperLegL", "UpperLegR", "UpperArmL", "UpperArmR"].map(n => { const b = f.getObjectByName(n); return b && { b, q: b.quaternion.clone() }; });
     if (rig.some(r => !r)) return null;
     const p = new THREE.Group(); f.scale.setScalar(0.78); p.add(f); p.userData.rig = rig;
-    posePerson(p, 0, false);
+    p.userData.A = animate(f, name); p.userData.A.play("idle", 0, 1, Math.random());   // fase 4: echte clips
     return p;
   }
   // sw = zwaai van benen/armen; up = false (armen omlaag) of een getal (armen omhoog, juichen)
   function posePerson(p, sw, up) {
+    if (p.userData.A) { p.userData.A.play(up === false ? (sw ? "sweep" : "idle") : "cheer", 0.3); return; }
     const R = p.userData.rig;
     if (R) {
       for (let k = 0; k < 2; k++) { const r = R[k]; r.b.quaternion.copy(r.q); r.b.rotateOnAxis(AZ, sw * 0.8); }
@@ -691,13 +701,14 @@ export function createWorld(container, H, M = {}) {
     const p = person(coatCols[i % coatCols.length], i);
     const horiz = i % 2 === 0;
     const lane = horiz ? ((i % 6) - 3 + 0.5) * CELL : ((i % 10) - 5 + 0.5) * CELL;
-    Object.assign(p.userData, { horiz, lane: lane + (i % 4 < 2 ? 1.05 : -1.05), dir: i % 3 === 0 ? -1 : 1, pos: (i * 7.3) % 60 - 30, speed: 0.6 + (i % 5) * 0.12, ph: i, fig: FIGS[i % FIGS.length] });
+    // verticale straten lopen dood op de Hinterlandmauer (z ±18,8): daar keren
+    Object.assign(p.userData, { horiz, lane: lane + (i % 4 < 2 ? 1.05 : -1.05), dir: i % 3 === 0 ? -1 : 1, pos: horiz ? (i * 7.3) % 70 - 35 : (i * 5.3) % 40 - 22, min: horiz ? -40 : -26, max: horiz ? 40 : 16.6, stop: 0, speed: 0.6 + (i % 5) * 0.12, ph: i, fig: FIGS[i % FIGS.length] });
     D.add(p); walkers.push(p);
   }
   // rij voor de Kaufhalle: langer als er Bückware is
   const kb = BUILDINGS.find(b => b.id === "konsum");
-  const queue = [];
-  for (let i = 0; i < 12; i++) { const p = person(coatCols[(i + 3) % coatCols.length], i, ["fig_vrouw", "fig_burgeres", "fig_burger", "fig_vrouw", "fig_arbeider", "fig_burgeres", "fig_vrouw"][i % 7]); p.position.set(kb.x * CELL - 2.2 + i * 0.6, 0, kb.z * CELL + 2.6 + (i > 6 ? 0.5 : 0)); if (i > 6) p.position.x = kb.x * CELL - 2.2 + (i - 7) * 0.6 + 4.2; p.rotation.y = -Math.PI / 2; D.add(p); queue.push(p); }
+  const queue = []; const queueG = new THREE.Group(); D.add(queueG);
+  for (let i = 0; i < 12; i++) { const p = person(coatCols[(i + 3) % coatCols.length], i, ["fig_vrouw", "fig_burgeres", "fig_burger", "fig_vrouw", "fig_arbeider", "fig_burgeres", "fig_vrouw"][i % 7]); p.position.set(kb.x * CELL - 2.2 + i * 0.6, 0, kb.z * CELL + 2.6 + (i > 6 ? 0.5 : 0)); if (i > 6) p.position.x = kb.x * CELL - 2.2 + (i - 7) * 0.6 + 4.2; p.rotation.y = -Math.PI / 2; queueG.add(p); queue.push(p); }
   // tint: kopie van het materiaal met een kleur (FDJ-blauwhemden, pioniers)
   function tint(p, col) { p.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.color = new THREE.Color(col); } }); return p; }
   const groups = { subbotnik: new THREE.Group(), fdj: new THREE.Group(), pioneers: new THREE.Group(), intershop: new THREE.Group() };
@@ -729,8 +740,10 @@ export function createWorld(container, H, M = {}) {
 
   // finale: menigte & vuurwerk
   const crowd = new THREE.Group(); crowd.visible = false; D.add(crowd);
-  for (let i = 0; i < 90; i++) { const p = person(coatCols[i % coatCols.length], i * 7); p.position.set(-8 + Math.random() * 16, 0, WALL_Z + 1 + Math.random() * 9); p.userData.ph = Math.random() * 6; crowd.add(p); }
+  // menigte op 9 november: op de strook en in het Westen; in de Muurlijn alleen door de opening
+  for (let i = 0; i < 90; i++) { const p = person(coatCols[i % coatCols.length], i * 7); let x, z; do { x = -11 + Math.random() * 22; z = SUR.Z.fence + 0.8 + Math.random() * 13; } while (Math.abs(z - SUR.Z.wall) < 0.9 && Math.abs(x) > 3.6); p.position.set(x, 0, z); p.rotation.y = Math.PI + (Math.random() - 0.5); p.userData.ph = Math.random() * 6; p.userData.home = p.position.clone(); crowd.add(p); }
   crowd.traverse(o => { if (o.isMesh) o.castShadow = false; });
+  const mixGroups = [queueG, ...Object.values(groups)];
   const fireworks = [];
   for (let i = 0; i < 5; i++) { const g = new THREE.BufferGeometry(); const n = 80; const arr = new Float32Array(n * 3); g.setAttribute("position", new THREE.BufferAttribute(arr, 3)); const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: [0xffd54f, 0xff4f8a, 0x4fd7ff, 0xffffff, 0x7dff6a][i], size: 0.5, transparent: true })); pts.userData = { t: Math.random() * 3, n, origin: new THREE.Vector3(-10 + i * 5, 14 + i % 3 * 3, WALL_Z + 5), dirs: Array.from({ length: n }, () => new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()) }; pts.visible = false; D.add(pts); fireworks.push(pts); }
 
@@ -753,6 +766,7 @@ export function createWorld(container, H, M = {}) {
       placed.push({ x: L.x, y, w: wd }); L.el.style.transform = `translate(-50%,-100%) translate(${L.x}px,${y}px)`; });
   }
   function updateLabels() {
+    labelsEl.style.visibility = (mode === "office" && hands.busy()) || film ? "hidden" : "";
     const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
     labelMap.forEach(el => el.style.display = "none");
     const pend = [];
@@ -789,10 +803,12 @@ export function createWorld(container, H, M = {}) {
   // ======================= INPUT =======================
   const ray = new THREE.Raycaster(); const ptr = new THREE.Vector2();
   let down = null;
-  renderer.domElement.addEventListener("pointerdown", e => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  renderer.domElement.addEventListener("pointerdown", e => { down = { x: e.clientX, y: e.clientY, t: performance.now(), lx: e.clientX, ly: e.clientY }; idleT = Math.min(idleT, 0); if (hands.busy()) hands.skip(); if (film) film.skip = true; });
+  // kantoor: slepen = rondkijken (naar het raam, de deur, de kast); veert na een paar seconden terug
+  renderer.domElement.addEventListener("pointermove", e => { if (!down || mode !== "office" || fly) return; const dx = e.clientX - down.lx, dy = e.clientY - down.ly; down.lx = e.clientX; down.ly = e.clientY; if (Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y) < 8) return; look.yaw = Math.max(-1.1, Math.min(1.1, look.yaw + dx * 0.005)); look.pitch = Math.max(-0.35, Math.min(0.45, look.pitch - dy * 0.004)); look.hold = 3.5; });
   renderer.domElement.addEventListener("pointerup", e => {
     if (!down) return; const dx = e.clientX - down.x, dy = e.clientY - down.y; const dt = performance.now() - down.t; down = null;
-    if (dx * dx + dy * dy > 80 || dt > 500) return;
+    if (dx * dx + dy * dy > 80 || dt > 500 || fly || film) return;
     const r = renderer.domElement.getBoundingClientRect();
     ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     if (mode === "office") {
@@ -825,45 +841,137 @@ export function createWorld(container, H, M = {}) {
     const dir = new THREE.Vector3(0, aspect < 1 ? 0.36 : 0.42, 1).normalize();
     oTarget.set(0, aspect < 1 ? 1.12 : 1.1, -0.45);
     oCam.position.copy(oTarget).addScaledVector(dir, d);
-    oCam.lookAt(oTarget); oCam.updateProjectionMatrix();
+    oCam.lookAt(oTarget); oCam.updateProjectionMatrix(); oBase.copy(oCam.position);
     const hw = aspect < 1 ? 15 : 24; const hh = hw / aspect;
     Object.assign(dCam, { left: -hw, right: hw, top: hh, bottom: -hh }); dCam.updateProjectionMatrix();
     if (IN) IN.resize(aspect);
   }
   window.addEventListener("resize", resize); resize();
 
+  // ======================= FILMPJES (fase 4) =======================
+  // 'zugriff': een grijze Wartburg rijdt om vijf uur 's ochtends voor bij een arrestatie.
+  // 'mauer': 9 november 1989, de segmenten vallen, de menigte rent door de opening.
+  const filmEl = document.createElement("div"); filmEl.id = "film"; filmEl.innerHTML = '<i class="bar t"></i><i class="bar b"></i><div class="cap"></div><div class="skip">Tap to skip</div>'; document.body.appendChild(filmEl); filmEl.addEventListener("click", () => { if (film) film.skip = true; });
+  const filmLight = new THREE.PointLight(0xffd27a, 0, 9, 1.5); D.add(filmLight);
+  function filmStart(kind, data, cb) {
+    const prev = { hemi: hemi.intensity, sun: sun.intensity, target: controls.target.clone(), pos: dCam.position.clone(), zoom: dCam.zoom, mode };
+    fly = null; postMat.uniforms.fade.value = 0; labelsEl.style.opacity = ""; mode = "district"; labelsEl.dataset.mode = "district"; controls.enabled = false; IN = null; walkSel = null;
+    film = { kind, t: 0, cb, prev, objs: [], skip: false, dur: kind === "mauer" ? 12 : 8.2 };
+    filmEl.querySelector(".cap").innerHTML = data.caption || ""; filmEl.className = "on"; document.body.classList.add("film");
+    hemi.intensity = 0.7; sun.intensity = 0.45; postMat.uniforms.night.value = 1;
+    if (kind === "zugriff") {
+      const b = bGroups[data.bid] || bGroups.kollwitz; const bx = b.position.x, bz = b.position.z, sz = bz + CELL / 2 + 0.45;
+      const car = new THREE.Group(); const cm = instance(M, "wartburg353");
+      if (cm) { cm.scale.setScalar(0.5); cm.traverse(o => { if (o.isMesh && o.material.userData.paint) o.material.color.set(0x8d8f89); }); car.add(cm); } else car.add(box(1.6, 0.8, 0.8, mat(0x8d8f89), 0, 0.5, 0));
+      const beam = new THREE.SpotLight(0xfff0c0, 30, 14, 0.5, 0.6, 1.2); beam.position.set(0.9, 0.6, 0); beam.target.position.set(6, 0, 0); car.add(beam, beam.target); const glowL = new THREE.PointLight(0xfff0c8, 5, 7, 1.3); glowL.position.set(1.4, 1.2, 0); car.add(glowL); [-0.22, 0.22].forEach(z => car.add(box(0.05, 0.1, 0.12, new THREE.MeshBasicMaterial({ color: 0xfff6d0 }), 0.98, 0.42, z, false)));
+      car.position.set(bx - 22, 0, sz); D.add(car); film.objs.push(car);
+      const men = ["fig_stasi", "fig_stasi"].map((f, i) => { const p = person(0x333333, i, f); p.visible = false; D.add(p); film.objs.push(p); return p; });
+      Object.assign(film, { car, men, bx, bz, sz });
+      camTo(bx, sz - 0.5, 2.7, 0.01);
+    } else {
+      camTo(0, SUR.Z.wall + 0.5, 2.0, 0.01); filmLight.position.set(0, 6, SUR.Z.wall - 2); filmLight.distance = 22; filmLight.intensity = 14;
+      crowd.visible = true; fireworks.forEach(f => f.visible = false);
+      wallSegs.forEach(sg => { sg.visible = true; sg.rotation.set(0, 0, 0); sg.position.y = 0; });
+      crowd.children.forEach((p, i) => { const u = p.userData; u.f0 = new THREE.Vector3(-9 + Math.random() * 18, 0, SUR.Z.fence + 1 + Math.random() * 3.5); u.f1 = new THREE.Vector3(Math.max(-3, Math.min(3, u.f0.x * 0.4)), 0, SUR.Z.wall - 0.3); u.f2 = new THREE.Vector3(-9 + Math.random() * 18, 0, SUR.Z.wall + 1.5 + Math.random() * 5.5); u.delay = 3.2 + Math.random() * 4.5; u.leg = 0; p.position.copy(u.f0); p.rotation.y = 0; if (u.A) u.A.play("idle", 0); });
+    }
+  }
+  function filmTick(dt) {
+    const F = film; F.t += dt * (F.skip ? 6 : 1); const t = F.t;
+    if (F.kind === "zugriff") {
+      const stopX = F.bx + 0.6; const k = Math.min(1, t / 3.2); F.car.position.x = F.bx - 22 + (stopX - (F.bx - 22)) * (1 - Math.pow(1 - k, 2.2));
+      F.men.forEach((p, i) => { const A = p.userData.A; if (t < 3.6) return; p.visible = t < 6.6; const k2 = Math.min(1, (t - 3.6 - i * 0.3) / 2.2); if (k2 <= 0) { p.position.set(stopX + 0.4 - i * 0.9, 0, F.sz - 0.5); return; } p.position.set(stopX + 0.4 - i * 0.9 + (0.6 - (stopX + 0.4 - i * 0.9 - F.bx)) * k2 * 0.6, 0, F.sz - 0.5 - k2 * 2.6); p.rotation.y = Math.PI; if (A) { A.play(k2 < 1 ? "walk" : "idle", 0.2); A.update(dt); } });
+      filmLight.position.set(F.bx, 4.5, F.bz + 2.4); filmLight.intensity = t > 5.6 ? (Math.sin(t * 40) > -0.3 ? 9 : 2) * Math.min(1, (t - 5.6) * 2) : 0;
+      if (t > 1) { const off = new THREE.Vector3().subVectors(dCam.position, controls.target); controls.target.x += dt * 0.25; dCam.position.copy(controls.target).add(off); }
+    } else {
+      wallSegs.forEach((sg, i) => { const st = 1.2 + Math.abs(i - (wallSegs.length - 1) / 2) * 0.35; const k = Math.max(0, Math.min(1, (t - st) / 0.9)); sg.rotation.x = k * k * 1.42 * (i % 2 ? 1 : 0.92); sg.position.y = -k * 0.15; });
+      fireworks.forEach(f => f.visible = t > 5);
+      crowd.children.forEach(p => { const u = p.userData, A = u.A; const tt = t - u.delay; let tgt = null;
+        if (tt > 0) { tgt = u.leg === 0 ? u.f1 : u.leg === 1 ? u.f2 : null; }
+        if (tgt) { const d = new THREE.Vector3().subVectors(tgt, p.position); d.y = 0; const L = d.length(); const sp = 3.2 * dt * (F.skip ? 6 : 1); if (L < 0.15) u.leg++; else { p.position.addScaledVector(d.normalize(), Math.min(L, sp)); p.rotation.y = Math.atan2(d.x, d.z); } if (A) A.play("run", 0.2); }
+        else if (u.leg >= 2) { p.position.y = Math.abs(Math.sin(t * 5 + u.ph)) * 0.25; if (A) A.play("cheer", 0.3); }
+        if (A) A.update(dt); });
+      if (t > 4) { const off = new THREE.Vector3().subVectors(dCam.position, controls.target); controls.target.z += dt * 0.25; dCam.position.copy(controls.target).add(off); }
+    }
+    if (F.t >= F.dur) filmEnd();
+  }
+  function filmEnd() {
+    const F = film; if (!F) return; film = null; filmEl.className = ""; document.body.classList.remove("film");
+    F.objs.forEach(o => D.remove(o)); filmLight.intensity = 0; filmLight.distance = 9;
+    hemi.intensity = F.prev.hemi; sun.intensity = F.prev.sun; postMat.uniforms.night.value = 0;
+    controls.target.copy(F.prev.target); dCam.position.copy(F.prev.pos); dCam.zoom = F.prev.zoom; dCam.updateProjectionMatrix();
+    if (F.kind === "mauer") { crowd.children.forEach(p => { if (p.userData.leg < 2) { p.position.copy(p.userData.f2); p.userData.leg = 2; } }); fireworks.forEach(f => f.visible = true); }
+    controls.enabled = F.prev.mode === "district"; mode = F.prev.mode; labelsEl.dataset.mode = mode;
+    if (F.cb) F.cb();
+  }
+
   // ======================= LOOP =======================
-  let ringing = false, selected = null, finale = false, winter = false;
+  let ringing = false, selected = null, finale = false, winter = false, film = null, camTw = null, fly = null;
+  function camTo(x, z, zoom, dur = 0.8, done) { camTw = { a: controls.target.clone(), b: new THREE.Vector3(x, 0, z), za: dCam.zoom, zb: zoom == null ? dCam.zoom : zoom, t: 0, dur, done }; }
   const basePhone = phone.position.clone();
   function loop() {
     const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+    // overgang kantoor -> wijk: camera vliegt door het raam, dan zakt de wijk-camera naar zijn plek
+    let flyOffice = false;
+    if (fly) {
+      fly.t += dt; const T1 = 0.6, T2 = 1.45;
+      if (fly.t < T1) { const k = fly.t / T1, e = k * k; flyOffice = true; postMat.uniforms.fade.value = Math.max(0, (k - 0.45) / 0.55);
+        const p0 = fly.p0, wp = new THREE.Vector3(0.55, 1.72, -1.15); oCam.position.lerpVectors(p0, wp, e); oCam.lookAt(new THREE.Vector3(0.55, 1.6, -4)); }
+      else if (fly.t < T2) { const k = (fly.t - T1) / (T2 - T1), e = 1 - Math.pow(1 - k, 3); postMat.uniforms.fade.value = 1 - Math.min(1, k * 1.6); dCam.zoom = fly.z1 + (fly.z0 - fly.z1) * e; dCam.updateProjectionMatrix(); }
+      else { postMat.uniforms.fade.value = 0; dCam.zoom = fly.z0; dCam.updateProjectionMatrix(); fly = null; labelsEl.style.opacity = ""; }
+    }
+    if (flyOffice) { draw(O, oCam); requestAnimationFrame(loop); return; }
     if (mode === "office") {
       phone.position.x = basePhone.x + (ringing ? Math.sin(t * 60) * 0.006 * (Math.sin(t * 3) > 0 ? 1 : 0) : 0);
       handset.position.y = hsBaseY + (ringing && Math.sin(t * 3) > 0 ? Math.abs(Math.sin(t * 30)) * 0.01 : 0);
       const now = new Date(); h1.rotation.z = -(now.getMinutes() / 60) * Math.PI * 2; h2.rotation.z = -((now.getHours() % 12) / 12) * Math.PI * 2;
       smokeO.forEach(s => { s.userData.t = (s.userData.t + dt * 0.15) % 1; const k = s.userData.t; s.position.set(0.32 + Math.sin(k * 9 + t) * 0.03 * k, DESK_Y + 0.04 + k * 0.6, 0.28 + Math.cos(k * 7) * 0.02 * k); s.scale.setScalar(0.5 + k * 2.5); s.material.opacity = 0.18 * (1 - k); });
       if (caseF.visible) caseF.position.y = DESK_Y + 0.015 + Math.max(0, Math.sin(t * 4)) * 0.006;
-      // lichte camerabeweging
-      oCam.position.x += (Math.sin(t * 0.3) * 0.015 - (oCam.position.x - oTarget.x)) * 0.02;
-      oCam.lookAt(oTarget);
+      // lichte camerabeweging + rondkijken (slepen), dan de handen (die buigen de camera tijdens een handeling)
+      if (look.hold > 0) look.hold -= dt; else { look.yaw *= 1 - Math.min(1, dt * 1.6); look.pitch *= 1 - Math.min(1, dt * 1.6); }
+      const bp = oBase.clone(); bp.x += Math.sin(t * 0.3) * 0.015;
+      const ld = new THREE.Vector3().subVectors(oTarget, oBase); ld.applyAxisAngle(new THREE.Vector3(0, 1, 0), look.yaw); const rax = new THREE.Vector3(-ld.z, 0, ld.x).normalize(); ld.applyAxisAngle(rax, look.pitch);
+      hands.update(dt, { pos: bp, look: bp.clone().add(ld) });
+      drawerOpen += ((drawerT > 0 ? 1 : 0) - drawerOpen) * Math.min(1, dt * 9); if (drawerT > 0) drawerT -= dt; drawer.position.z = drawerOpen * 0.32;
+      idleT += dt; if (hands.busy() || (H.canIdle && !H.canIdle())) idleT = Math.min(idleT, 0); if (idleT > 16) { idleT = -12; hands.idle(Math.random() < 0.5 ? "coffee" : "smoke"); }
       if (radioOn && radio.userData.dial) radio.userData.dial.material.color.setHex(Math.sin(t * 3) > -0.6 ? 0xe9c86a : 0xb89a4a);
       lidOpen += ((kasOpen ? 1 : 0) - lidOpen) * 0.15; lid.rotation.x = -lidOpen * 1.4;
       draw(O, oCam);
     } else if (mode === "interior" && IN) {
       IN.update(t, dt); draw(IN.scene, IN.cam);
     } else {
+      if (camTw) { camTw.t += dt / camTw.dur; const k = Math.min(1, camTw.t), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; const off = new THREE.Vector3().subVectors(dCam.position, controls.target); controls.target.lerpVectors(camTw.a, camTw.b, e); dCam.position.copy(controls.target).add(off); dCam.zoom = camTw.za + (camTw.zb - camTw.za) * e; dCam.updateProjectionMatrix(); if (k >= 1) { const d = camTw.done; camTw = null; if (d) d(); } }
       controls.update();
-      cars.forEach(c => { const u = c.userData; u.pos += u.dir * u.speed * dt; if (u.pos > 34) u.pos = -34; if (u.pos < -34) u.pos = 34; if (u.horiz) { c.position.set(u.pos, 0, u.lane); c.rotation.y = u.dir > 0 ? 0 : Math.PI; } else { c.position.set(u.lane, 0, u.pos); c.rotation.y = u.dir > 0 ? -Math.PI / 2 : Math.PI / 2; } });
-      walkers.forEach((p, i) => { const u = p.userData; if (walkSel && walkSel.i === i) { posePerson(p, 0, false); return; } u.pos += u.dir * u.speed * dt; if (u.pos > 30) u.pos = -30; if (u.pos < -30) u.pos = 30; if (u.horiz) { p.position.set(u.pos, 0, u.lane); p.rotation.y = u.dir > 0 ? Math.PI / 2 : -Math.PI / 2; } else { p.position.set(u.lane, 0, u.pos); p.rotation.y = u.dir > 0 ? 0 : Math.PI; } posePerson(p, Math.sin(t * 7 * u.speed + u.ph) * 0.6, false); });
+      { const tg = controls.target, cx = Math.max(-38, Math.min(38, tg.x)), cz = Math.max(-30, Math.min(34, tg.z)); if (cx !== tg.x || cz !== tg.z) { dCam.position.x += cx - tg.x; dCam.position.z += cz - tg.z; tg.x = cx; tg.z = cz; } }
+      cars.forEach(c => { const u = c.userData; const off = d => (u.horiz ? d : -d) * 0.45;
+        let ax, ac;
+        if (u.turn >= 0) { u.turn += dt * u.speed / 1.6; const k = Math.min(1, u.turn); const o0 = off(u.dir); ax = u.pos + Math.sin(k * Math.PI) * 0.9 * u.dir; ac = u.lane + o0 * Math.cos(k * Math.PI); if (k >= 1) { u.turn = -1; u.dir = -u.dir; } }
+        else { u.pos += u.dir * u.speed * dt; if (u.pos > u.max || u.pos < u.min) { u.pos = Math.max(u.min, Math.min(u.max, u.pos)); u.turn = 0; } ax = u.pos; ac = u.lane + off(u.dir); }
+        const px = c.position.x, pz = c.position.z;
+        if (u.horiz) c.position.set(ax, 0, ac); else c.position.set(ac, 0, ax);
+        const dx = c.position.x - px, dz = c.position.z - pz; if (dx * dx + dz * dz > 1e-6) c.rotation.y = Math.atan2(-dz, dx); });
+      walkers.forEach((p, i) => { const u = p.userData, A = u.A; let face;
+        if (walkSel && walkSel.i === i) { face = Math.atan2(dCam.position.x - p.position.x, dCam.position.z - p.position.z); if (A) A.play("talk", 0.3); else posePerson(p, 0, false); }
+        else if (u.stop > 0) { u.stop -= dt; if (A) A.play("idle", 0.4); else posePerson(p, 0, false); face = u.face; }
+        else {
+          u.pos += u.dir * u.speed * dt; if (u.pos > u.max) { u.pos = u.max; u.dir = -1; } if (u.pos < u.min) { u.pos = u.min; u.dir = 1; }
+          if (Math.random() < dt * 0.025) u.stop = 2 + Math.random() * 5;   // even stilstaan, om zich heen kijken
+          if (u.horiz) p.position.set(u.pos, 0, u.lane); else p.position.set(u.lane, 0, u.pos);
+          face = u.face = u.horiz ? (u.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : (u.dir > 0 ? 0 : Math.PI);
+          if (A) A.play("walk", 0.3, u.speed / 0.85); else posePerson(p, Math.sin(t * 7 * u.speed + u.ph) * 0.6, false);
+        }
+        let d = face - p.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); p.rotation.y += d * Math.min(1, dt * 7);
+        if (A) A.update(dt); });
+      mixGroups.forEach(gr => { if (gr.visible) gr.children.forEach(p => p.userData.A && p.userData.A.update(dt)); });
       if (winter) smokeW.forEach(s => { const u = s.userData; u.t = (u.t + dt * 0.1) % 1; s.position.set(u.c.x + u.t * 3, u.c.y + u.t * 4.5, u.c.z - u.t * 1.2 + Math.sin(u.t * 9) * 0.3); s.scale.setScalar(0.5 + u.t * 2.4); s.material.opacity = 0.28 * (1 - u.t); });
       smokeD.forEach(s => { const u = s.userData; u.t = (u.t + dt * 0.08) % 1; const k = u.big ? 1 : 0.5; s.position.set(u.c.x + u.t * 6 * k, u.c.y + u.t * 7 * k, u.c.z - u.t * 2 * k + Math.sin(u.t * 10) * 0.4); s.scale.setScalar((0.6 + u.t * 3) * k); s.material.opacity = 0.3 * (1 - u.t); });
       BUILDINGS.forEach(b => { const g = bGroups[b.id]; if (g.userData.bug.visible) { g.userData.bug.rotation.y += dt * 2; g.userData.bug.scale.setScalar(1 + Math.sin(t * 5) * 0.15); } if (g.userData.ring.visible) g.userData.ring.material.opacity = 0.55 + Math.sin(t * 4) * 0.3; });
-      tram.position.x = ((t * 2.2) % 80) - 40; flags.forEach((f, i) => { f.rotation.y = Math.sin(t * 2 + i) * 0.25; });
+      tram.position.x = ((t * 2.2) % 124) - 62; flags.forEach((f, i) => { f.rotation.y = Math.sin(t * 2 + i) * 0.25; });
       if (snow.visible) { const a = snow.geometry.attributes.position; for (let i = 0; i < snowN; i++) { a.array[i * 3 + 1] -= dt * 3; a.array[i * 3] += Math.sin(t + i) * dt * 0.3; if (a.array[i * 3 + 1] < 0) a.array[i * 3 + 1] = 40; } a.needsUpdate = true; }
       if (finale) {
-        crowd.children.forEach(p => { p.position.y = Math.abs(Math.sin(t * 5 + p.userData.ph)) * 0.3; posePerson(p, 0, Math.sin(t * 6 + p.userData.ph) * 0.4); });
+        if (!film) crowd.children.forEach(p => { p.position.y = Math.abs(Math.sin(t * 5 + p.userData.ph)) * 0.3; if (p.userData.A) { p.userData.A.play("cheer", 0.3, 0.8 + (p.userData.ph % 1) * 0.5); p.userData.A.update(dt); } else posePerson(p, 0, Math.sin(t * 6 + p.userData.ph) * 0.4); });
         fireworks.forEach(f => { const u = f.userData; u.t += dt; const k = u.t % 3; const a = f.geometry.attributes.position; for (let i = 0; i < u.n; i++) { const d = u.dirs[i]; a.array[i * 3] = u.origin.x + d.x * k * 4; a.array[i * 3 + 1] = u.origin.y + d.y * k * 4 - k * k * 0.6; a.array[i * 3 + 2] = u.origin.z + d.z * k * 4; } a.needsUpdate = true; f.material.opacity = Math.max(0, 1 - k / 2.2); });
       }
+      if (film) filmTick(dt);
       draw(D, dCam);
     }
     updateLabels();
@@ -873,7 +981,7 @@ export function createWorld(container, H, M = {}) {
 
   // ======================= API =======================
   return {
-    setMode(m) { mode = m; controls.enabled = m === "district"; labelsEl.dataset.mode = m; if (m !== "interior") { IN = null; } if (m !== "district") walkSel = null; },
+    setMode(m, instant) { if (mode === "office" && m === "district" && !instant && !film) { fly = { t: 0, p0: oCam.position.clone(), z0: dCam.zoom, z1: Math.min(3.2, dCam.zoom * 2.6) }; labelsEl.style.opacity = "0"; if (hands.holding()) hands.phoneDown(); } mode = m; controls.enabled = m === "district"; labelsEl.dataset.mode = m; if (m !== "interior") { IN = null; } if (m !== "district") walkSel = null; },
     enterInterior(kind, data) { IN = buildInterior(kind, data, M); interiorBadges = data.badges || {}; IN.resize(container.clientWidth / Math.max(1, container.clientHeight)); mode = "interior"; controls.enabled = false; labelsEl.dataset.mode = "interior"; labelMap.forEach((el, id) => { if (id.startsWith("i:")) { el.remove(); labelMap.delete(id); } }); },
     setInteriorBadges(b) { interiorBadges = b || {}; },
     setNews(line) { if (line !== newsLine) { newsLine = line; drawNews(); } },
@@ -884,6 +992,11 @@ export function createWorld(container, H, M = {}) {
     walkerFig: i => walkers[i] && walkers[i].userData.fig,
     selectWalker(i, label) { walkSel = i == null ? null : { i, label }; labelMap.forEach((el, id) => { if (id.startsWith("w:")) { el.remove(); labelMap.delete(id); } }); },
     getMode: () => mode,
+    // handelingen met de handen (fase 4). Buiten het kantoor: meteen de callback.
+    act(name, ...args) { const cb = typeof args[args.length - 1] === "function" ? args.pop() : null; if (mode !== "office" || fly) { if (cb) cb(); return; } idleT = 0; if (name === "drawer") { drawerT = 1.4; sfx.drawer(); if (cb) setTimeout(cb, 380); return; } if (!hands[name]) { if (cb) cb(); return; } hands[name](...args, cb); },
+    holding: () => hands.holding(),
+    cinematic(kind, data, cb) { if (film) filmEnd(); if (hands.holding()) hands.phoneDown(); filmStart(kind, data || {}, cb); },
+    inFilm: () => !!film,
     setRinging(b) { ringing = b; },
     setOffice({ folders: n, badges, caseOpen, date, month }) {
       setFolders(n); officeBadges = badges || {}; caseF.visible = !!caseOpen;
@@ -903,10 +1016,12 @@ export function createWorld(container, H, M = {}) {
       });
       bInfo = info || {};
       if (wtr !== winter) { winter = wtr; snow.visible = winter; groundMat.color.set(winter ? 0xd9d9d4 : 0x5f5a4c); treeMat.color.set(winter ? 0xd9ddd8 : 0x4f5e3a); }
-      if (fin !== finale) { finale = fin; if (fin) { const off = new THREE.Vector3().subVectors(dCam.position, controls.target); controls.target.set(0, 0, WALL_Z + 3); dCam.position.copy(controls.target).add(off); } crowd.visible = fin; fireworks.forEach(f => f.visible = fin); [-2, -1, 0, 1, 2].forEach(k => { const s = wallSegs[Math.floor(wallSegs.length / 2) + k]; if (s) s.visible = !fin; }); }
+      if (fin !== finale) { finale = fin; if (fin) { const off = new THREE.Vector3().subVectors(dCam.position, controls.target); controls.target.set(0, 0, WALL_Z + 3); dCam.position.copy(controls.target).add(off); } crowd.visible = fin; fireworks.forEach(f => f.visible = fin); if (!fin) wallSegs.forEach(s => { s.visible = true; s.rotation.set(0, 0, 0); s.position.y = 0; }); else if (!wallSegs[0].rotation.x) wallSegs.forEach(s => s.visible = false); }
     },
     select(id) { if (selected && bGroups[selected]) bGroups[selected].userData.ring.visible = false; selected = id; if (id && bGroups[id]) bGroups[id].userData.ring.visible = true; },
-    focus(id) { const b = bGroups[id]; if (!b) return; const off = new THREE.Vector3().subVectors(dCam.position, controls.target); controls.target.set(b.position.x, 0, b.position.z); dCam.position.copy(controls.target).add(off); },
+    // inzoomen op een getikt gebouw (fase 4): vloeiend naar het gebouw, iets dichterbij
+    focus(id, instant) { const b = bGroups[id]; if (!b) return; if (instant) { const off = new THREE.Vector3().subVectors(dCam.position, controls.target); controls.target.set(b.position.x, 0, b.position.z); dCam.position.copy(controls.target).add(off); return; } camTo(b.position.x, b.position.z + 1, Math.max(dCam.zoom, 1.55), 0.7); },
+    look(x, z, zoom, dur = 0.01) { camTo(x, z, zoom, dur); },
     resize,
   };
 }
